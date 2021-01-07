@@ -1,0 +1,210 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r}
+library(table1)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(haven)
+library(knitr)
+```
+
+```{r data import}
+#import data
+d <- read_dta(file = "~/Dropbox/COVID aerosols/clean data/1 4 21/mergeddata_1421.dta")
+
+#filtering to test data only
+test <- d %>% filter(sampletype == "TEST")
+```
+
+## CO2 averages by hospital, type of sampling space, and ventilation measures
+```{r}
+sum1 <- test %>%
+  group_by(hosp) %>%
+  summarise(n = n(), Mean = round(mean(co2average, na.rm = TRUE), digits = 1), SD = round(sd(co2average, na.rm = TRUE), digits = 1))
+
+sum2 <- test %>%
+  group_by(loctype) %>%
+  summarise(n = n(), Mean = round(mean(co2average, na.rm = TRUE), digits = 1), SD = round(sd(co2average, na.rm = TRUE), digits = 1))
+
+sum3 <- test %>%
+  group_by(nearwindowopen) %>%
+  summarise(n = n(), Mean = round(mean(co2average, na.rm = TRUE), digits = 1), SD = round(sd(co2average, na.rm = TRUE), digits = 1))
+
+sum4 <- test %>%
+  group_by(neardooropen) %>%
+  summarise(n = n(), Mean = round(mean(co2average, na.rm = TRUE), digits = 1), SD = round(sd(co2average, na.rm = TRUE), digits = 1))
+
+colnames(sum1) <- c("Hospital", "n", "Mean", "SD")
+colnames(sum2) <- c("Type of sampling space", "n", "Mean", "SD")
+colnames(sum3) <- c("Nearest window open", "n", "Mean", "SD")
+colnames(sum4) <- c("Nearest door open", "n", "Mean", "SD")
+
+kable(sum1)
+kable(sum2)
+kable(sum3)
+kable(sum4)
+
+```
+
+\newpage
+## CO2 ppm over time during data collection 
+```{r}
+long <- test %>% select(sampleid, co2startnew, co2_5minnew, co2_10minnew,
+                        co2_15minnew, co2_20minnew, co2_25minnew, co2endnew)
+
+long <- melt(long)
+
+long <- long %>%
+  mutate(min = ifelse(variable == "co2startnew", 0, 
+               ifelse(variable == "co2_5minnew", 5,
+               ifelse(variable == "co2_10minnew", 10,
+               ifelse(variable == "co2_15minnew", 15,
+               ifelse(variable == "co2_20minnew", 20,
+               ifelse(variable == "co2_25minnew", 25,
+               ifelse(variable == "co2endnew", 30, NA))))))))
+
+long$value <- as.numeric(long$value)
+
+ggplot(data = long, aes(x = min, y = value, group = sampleid, color = sampleid)) +
+  geom_line() + 
+  theme(legend.position = "none") +
+  labs(y = "CO2 (ppm)", x= "Minute of data collection")
+  
+         
+```
+\newpage  
+  
+## Number of people in the room vs CO2 values, by whether the closest* window was open  
+```{r}
+test2 <- test %>%
+  mutate(newwindow = ifelse(nearwindowopen %in% c("Closed", "N/A"), "Closed", "Open"))
+
+long2 <- test2 %>% select(sampleid, co2startnew, co2_15minnew, co2endnew)
+
+long2 <- melt(long2, value.name = "co2value")
+
+long2 <- long2 %>%
+mutate(min = ifelse(variable == "co2startnew", 0, 
+               ifelse(variable == "co2_15minnew", 15,
+               ifelse(variable == "co2endnew", 30, NA))))
+
+long3 <- test2 %>% select(sampleid, numpeoplestart, numpeoplemid, peopleend, newwindow, loctype)
+
+long3 <- melt(long3)
+
+long3 <- long3 %>%
+mutate(min = ifelse(variable == "numpeoplestart", 0, 
+               ifelse(variable == "numpeoplemid", 15,
+               ifelse(variable == "peopleend", 30, NA))))
+
+total <- merge(long2, long3, by = c("sampleid", "min"))
+
+ggplot(data = total, aes(x = value, y = co2value, color = loctype)) + 
+  geom_point() +
+  facet_wrap(~newwindow) +
+  labs(y = "CO2 (ppm)", x= "Number of people in sampling space", color = "Type of\nsampling space")
+```
+*Rooms where there were no windows were categorized as "closed"  
+
+## Number of people in the room vs CO2 values, by whether the closest door was open
+```{r}
+long2 <- test %>% select(sampleid, co2startnew, co2_15minnew, co2endnew)
+
+long2 <- melt(long2, value.name = "co2value")
+
+long2 <- long2 %>%
+mutate(min = ifelse(variable == "co2startnew", 0, 
+               ifelse(variable == "co2_15minnew", 15,
+               ifelse(variable == "co2endnew", 30, NA))))
+
+long3 <- test %>% select(sampleid, numpeoplestart, numpeoplemid, peopleend, neardooropen, loctype)
+
+long3 <- melt(long3)
+
+long3 <- long3 %>%
+mutate(min = ifelse(variable == "numpeoplestart", 0, 
+               ifelse(variable == "numpeoplemid", 15,
+               ifelse(variable == "peopleend", 30, NA))))
+
+total <- merge(long2, long3, by = c("sampleid", "min"))
+
+ggplot(data = total, aes(x = value, y = co2value, color = loctype)) + 
+  geom_point() +
+  facet_wrap(~neardooropen) +
+  labs(y = "CO2 (ppm)", x= "Number of people in sampling space", color = "Type of\nsampling space")
+```
+
+## Number of people in the room vs CO2 values, by whether the closest door or window* was open  
+```{r}
+test2 <- test %>%
+  mutate(anyopen = ifelse(nearwindowopen == "Open" | neardooropen == "Open", "Either Open", "Both Closed"))
+
+long2 <- test2 %>% select(sampleid, co2startnew, co2_15minnew, co2endnew)
+
+long2 <- melt(long2, value.name = "co2value")
+
+long2 <- long2 %>%
+mutate(min = ifelse(variable == "co2startnew", 0, 
+               ifelse(variable == "co2_15minnew", 15,
+               ifelse(variable == "co2endnew", 30, NA))))
+
+long3 <- test2 %>% select(sampleid, numpeoplestart, numpeoplemid, peopleend, anyopen, loctype)
+
+long3 <- melt(long3)
+
+long3 <- long3 %>%
+mutate(min = ifelse(variable == "numpeoplestart", 0, 
+               ifelse(variable == "numpeoplemid", 15,
+               ifelse(variable == "peopleend", 30, NA))))
+
+total <- merge(long2, long3, by = c("sampleid", "min"))
+
+area <- test %>% select(sampleid, roomarea)
+
+total <- merge(total, area, by = "sampleid")
+
+ggplot(data = total, aes(x = value, y = co2value, color = loctype)) + 
+  geom_point() +
+  facet_wrap(~anyopen) +
+  labs(y = "CO2 (ppm)", x= "Number of people in sampling space", color = "Type of\nsampling space")
+```
+*Rooms where there were no windows were categorized as closed  
+\newpage
+  
+## CO2 ppm by room area and number of people in the sampling space
+```{r}
+total %>%
+  ggplot(aes(roomarea, value)) +
+  geom_point(aes(color = co2value)) +
+  labs(y = "Number of people in sampling space", x= "Room area (ft cub)", color = "CO2 (ppm)")
+```
+\newpage
+**Average CO2 value of 30-minute air sampling period by qPCR result**  
+
+```{r}
+test$result <- as.factor(test$result)
+ggplot(data = test, aes(x = result, y = co2average)) + 
+  geom_boxplot() +
+  geom_jitter() +
+  labs(x = "qPCR result", y = "Average CO2 (ppm)")
+
+#test.new <- test %>%
+#  mutate(result.new = ifelse(result %in% c("Detected in 1 replicate","Detected"), #1, 0))
+
+#model <- glm(result.new ~ co2average + hosp + numpeoplestart, data = test.new)
+
+#summary(model)
+```
