@@ -20,6 +20,44 @@ duplicates drop
 
 save labdata_1421, replace
 
+*window data
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\windows 1 4 21.csv", clear
+
+rename _submission__id dataid
+rename widthofopenwindowwindow_serialin width
+replace width = width/12
+rename heightofopenwindowwindow_seriali height
+replace height = height/12
+
+gen area = width*height
+egen openwinarea = sum(area), by(dataid)
+label var openwinarea "Total surface area of open windows (sq ft)"
+
+egen tag = tag(dataid)
+drop if tag == 0
+drop ïwindow_serial width height typeofwindow _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
+
+save windows_1421, replace
+
+*door data
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\doors 1 4 21.csv", clear
+
+rename _submission__id dataid
+rename widthofopendoordoor_serialinches width
+replace width = width/12
+rename heightofopendoordoor_serialinche height
+replace height = height/12
+
+gen area = width*height
+egen opendoorarea = sum(area), by(dataid)
+label var opendoorarea "Total surface area of open doors (sq ft)"
+
+egen tag = tag(dataid)
+drop if tag == 0
+drop ïdoor_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
+
+save doors_1421, replace
+
 *ward data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\ward data 1 4 21.csv", clear
 
@@ -117,10 +155,20 @@ label var tempstart "Ambient temperature at start (C)"
 label var humiditystart "Ambient humidity at start"
 
 *merge in room area sheet 
-merge 1:1 sampleid using roomarea
+replace roomarea = roomheight*roomwidth*roomlength
 rename roomarea roomvol
+merge 1:1 sampleid using roomarea
+replace roomvol = roomarea if roomvol == .
 label var roomvol "Room volume (ft cub)"
+drop roomarea _merge
+
+*merge in windows and doors 
+rename _id dataid
+merge 1:1 dataid using windows_1421
 drop _merge
+
+merge 1:1 dataid using doors_1421
+drop _merge dataid
 
 *fix co2 levels
 gen fixco2 = outdoorco2 - 410 if outdoorco2 > 430
@@ -141,19 +189,41 @@ label var co2_15minnew "Clean CO2 measurement at 15 minutes"
 label var co2_20minnew "Clean CO2 measurement at 20 minutes"
 label var co2_25minnew "Clean CO2 measurement at 25 minutes "
 label var co2endnew "Clean CO2 measurement at end of sample collection"
+
 *create co2 average variable
 egen co2average = rmean(co2startnew-co2endnew)
 label var co2average "Average CO2 measurement over sampling period (using clean measurements)"
+
+*create people average
+egen numpeopleavg = rmean(numpeoplestart numpeoplemid numpeopleend)
+label var numpeopleavg "Average numer of people in room over sampling period"
+
+*create population density variable
+gen popdensitystart = numpeoplestart/roomvol
+gen popdensitymid = numpeoplemid/roomvol
+gen popdensityend = numpeopleend/roomvol
+egen popdensityavg = rmean(popdensitystart popdensitymid popdensityend)
+label var popdensitystart "People per cubic foot at start of sample collection"
+label var popdensitymid "People per cubic foot at 15 minutes"
+label var popdensityend "People per cubic foot at end of sample collection"
+label var popdensityavg "Average people per cubic foot over sampling period"
+
+*rename loctype to OPD
+replace loctype = "OPD" if loctype == "Partitioned booth" | loctype == "Waiting area"
+replace loctype = "OPD" if samploc == "OPD"
 *sort by date of collection
 sort colldate
 
 *order variables
-order outdoorco2 co2start co2_5min-co2_25min co2end fixco2 ///
-		co2startnew-co2average , after(loctype)
+order roomwidth-roomheight roomvol outdoorco2 co2start /// 
+		co2_5min-co2_25min co2end fixco2 co2startnew-co2average, after(loctype)
 order starttime endtime, before(notes)
 order numcovidmid-numpeoplemid, after(numpeoplestart)
 order numcovidend-numpeopleend, after(numpeoplemid)
 order tempstart humiditystart, before(tempend)
+order popdensitystart-popdensityavg, after(numpeopleend)
+order openwinarea, after(numwinopen)
+order opendoorarea, after(numdooropen)
 *save separate ward dataset
 save warddata_1421, replace
 
