@@ -1,5 +1,5 @@
 clear all
-cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\1 4 21"
+cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\1 20 21"
 
 *room area data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room area.xlsx", sheet("Table 1") firstrow clear
@@ -7,7 +7,7 @@ import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\r
 save roomarea, replace
 
 *lab data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\lab data 1 4 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\lab data 1 20 21.csv", clear
 
 rename ïsampleid sampleid
 
@@ -18,10 +18,10 @@ rename rnaextractiondate rnadate
 drop if sampleid == ""
 duplicates drop
 
-save labdata_1421, replace
+save labdata_12021, replace
 
 *window data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\windows 1 4 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\windows 1 20 21.csv", clear
 
 rename _submission__id dataid
 rename widthofopenwindowwindow_serialin width
@@ -37,10 +37,10 @@ egen tag = tag(dataid)
 drop if tag == 0
 drop ïwindow_serial width height typeofwindow _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
 
-save windows_1421, replace
+save windows_12021, replace
 
 *door data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\doors 1 4 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\doors 1 20 21.csv", clear
 
 rename _submission__id dataid
 rename widthofopendoordoor_serialinches width
@@ -56,10 +56,10 @@ egen tag = tag(dataid)
 drop if tag == 0
 drop ïdoor_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
 
-save doors_1421, replace
+save doors_12021, replace
 
 *ward data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 4 21\ward data 1 4 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\ward data 1 20 21.csv", clear
 
 order sampleid, before(dateofcollection)
 
@@ -164,10 +164,10 @@ drop roomarea _merge
 
 *merge in windows and doors 
 rename _id dataid
-merge 1:1 dataid using windows_1421
+merge 1:1 dataid using windows_12021
 drop _merge
 
-merge 1:1 dataid using doors_1421
+merge 1:1 dataid using doors_12021
 drop _merge dataid
 
 *fix co2 levels
@@ -225,12 +225,12 @@ order popdensitystart-popdensityavg, after(numpeopleend)
 order openwinarea, after(numwinopen)
 order opendoorarea, after(numdooropen)
 *save separate ward dataset
-save warddata_1421, replace
+save warddata_12021, replace
 
 *merge in lab data
-merge 1:1 sampleid using labdata_1421
+merge 1:1 sampleid using labdata_12021
 drop collectionsite roomtype collectiondate _merge
 
 *save merged dataset
-save mergeddata_1421, replace
+save mergeddata_12021, replace
 
