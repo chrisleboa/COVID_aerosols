@@ -1,27 +1,40 @@
 clear all
-cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\1 20 21"
+cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\2 25 21"
 
 *room area data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room area.xlsx", sheet("Table 1") firstrow clear
 
+rename roomarea floorarea
+label var floorarea "Floor area (sq ft)"
+label var wallarea "Surface area of wall (sq ft)"
+drop if sampleid == ""
 save roomarea, replace
 
-*lab data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\lab data 1 20 21.csv", clear
+*room type data
+import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room types.xlsx", firstrow clear
 
-rename ïsampleid sampleid
+rename iscovid covidspace
+rename loctype2 locationtype
+drop samploc loctype
+
+save newroomtype, replace
+
+*lab data
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\lab data 2 25 21.csv", clear
 
 rename sampletypetestnegcontrol sampletype
 rename sarscov2detectedundetected result
+rename sarscov2detectedundetectedforn1 n1result
+rename sarscov2detectedundetectedn2 n2result
 rename rnaextractiondate rnadate
 
-drop if sampleid == ""
+drop if sampleid == "" | sampleid == "Negative control:"
 duplicates drop
 
-save labdata_12021, replace
+save labdata_22521, replace
 
 *window data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\windows 1 20 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\windows 2 25 21.csv", clear
 
 rename _submission__id dataid
 rename widthofopenwindowwindow_serialin width
@@ -35,12 +48,12 @@ label var openwinarea "Total surface area of open windows (sq ft)"
 
 egen tag = tag(dataid)
 drop if tag == 0
-drop ïwindow_serial width height typeofwindow _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
+drop ïwindow_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
 
-save windows_12021, replace
+save windows_21721, replace
 
 *door data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\doors 1 20 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\doors 2 25 21.csv", clear
 
 rename _submission__id dataid
 rename widthofopendoordoor_serialinches width
@@ -56,10 +69,10 @@ egen tag = tag(dataid)
 drop if tag == 0
 drop ïdoor_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
 
-save doors_12021, replace
+save doors_21721, replace
 
 *ward data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\1 20 21\ward data 1 20 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\ward data 2 25 21.csv", clear
 
 order sampleid, before(dateofcollection)
 
@@ -108,8 +121,8 @@ rename roomwidthfeetconvertinchestodeci roomwidth
 rename roomlengthfeetconvertinchestodec roomlength 
 rename roomheightfeetconvertinchestodec roomheight 
 rename room_area roomarea
-rename v60 tempend
-rename v62 humidityend
+rename v60 humidityend
+rename v62 tempend
 rename co2levelatendofcollectionppm co2end
 rename co2levelat5minutesppm co2_5min 
 rename co2levelat10minutesppm co2_10min
@@ -131,8 +144,6 @@ label var numpeoplestart "Total number of people in room at start"
 label var numpeoplemid "Total number of people in room at midpoint"
 label var numpeopleend "Total number of people in room at end"
 label var submittime "Time of form submission"
-label var tempend "Ambient temperature at end (C)"
-label var humidityend "Ambient humidity at end"
 label var starttime "Start time of air sampling"
 label var endtime "End time of air sampling"
 
@@ -155,25 +166,36 @@ label var tempstart "Ambient temperature at start (C)"
 label var humiditystart "Ambient humidity at start"
 
 *merge in room area sheet 
-replace roomarea = roomheight*roomwidth*roomlength
-rename roomarea roomvol
+replace sampleid = "87_ICD2_R6" if sampleid == "87_IC2_R6"
 merge 1:1 sampleid using roomarea
-replace roomvol = roomarea if roomvol == .
+replace floorarea = roomwidth*roomlength if floorarea == .
+gen roomvol = floorarea * roomheight
 label var roomvol "Room volume (ft cub)"
-drop roomarea _merge
+replace wallarea = ((roomwidth*roomheight)*2) + ((roomlength*roomheight)*2) if wallarea == .
+gen surfacearea = wallarea + (floorarea*2)
+label var surfacearea "Total area of surfaces in room (sq ft)"
+drop _merge
+
+*merge in room type sheet
+merge 1:1 sampleid using newroomtype
+drop samploc loctype _merge
 
 *merge in windows and doors 
 rename _id dataid
-merge 1:1 dataid using windows_12021
+merge 1:1 dataid using windows_22521
 drop _merge
 
-merge 1:1 dataid using doors_12021
+merge 1:1 dataid using doors_22521
 drop _merge dataid
+
+*fix one co2 data entry error 
+replace co2end = 427 if co2end == 247
 
 *fix co2 levels
 gen fixco2 = outdoorco2 - 410 if outdoorco2 > 430
 replace fixco2 = 0 if fixco2 == .
 label var fixco2 "Adjustment made to interior CO2 measurements from calibration check"
+gen outdoorco2new = outdoorco2 - fixco2
 gen co2startnew = co2start - fixco2
 gen co2_5minnew = co2_5min - fixco2
 gen co2_10minnew = co2_10min - fixco2
@@ -182,6 +204,7 @@ gen co2_20minnew = co2_20min - fixco2
 gen co2_25minnew = co2_25min - fixco2
 gen co2endnew = co2end - fixco2
 
+label var outdoorco2new "Clean outdoor CO2 measurement"
 label var co2startnew "Clean CO2 measurement at start of sample collection"
 label var co2_5minnew "Clean CO2 measurement at 5 minutes"
 label var co2_10minnew "Clean CO2 measurement at 10 minutes"
@@ -208,9 +231,10 @@ label var popdensitymid "People per cubic foot at 15 minutes"
 label var popdensityend "People per cubic foot at end of sample collection"
 label var popdensityavg "Average people per cubic foot over sampling period"
 
-*rename loctype to OPD
-replace loctype = "OPD" if loctype == "Partitioned booth" | loctype == "Waiting area"
-replace loctype = "OPD" if samploc == "OPD"
+*creation ventilation rate variable
+gen ventrate = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
+gen ventrate2 = ((10^6 * 0.0052)/(co2average - outdoorco2new))
+
 *sort by date of collection
 sort colldate
 
@@ -220,17 +244,20 @@ order roomwidth-roomheight roomvol outdoorco2 co2start ///
 order starttime endtime, before(notes)
 order numcovidmid-numpeoplemid, after(numpeoplestart)
 order numcovidend-numpeopleend, after(numpeoplemid)
+order numpeopleavg, after(numpeopleend)
 order tempstart humiditystart, before(tempend)
-order popdensitystart-popdensityavg, after(numpeopleend)
+order popdensitystart-popdensityavg, after(numpeopleavg)
 order openwinarea, after(numwinopen)
 order opendoorarea, after(numdooropen)
+order floorarea-surfacearea, after(roomvol)
 *save separate ward dataset
-save warddata_12021, replace
+save warddata_21721, replace
 
 *merge in lab data
-merge 1:1 sampleid using labdata_12021
+merge 1:1 sampleid using labdata_21721
 drop collectionsite roomtype collectiondate _merge
+drop if colldate == ""
 
 *save merged dataset
-save mergeddata_12021, replace
+save mergeddata_21721, replace
 
