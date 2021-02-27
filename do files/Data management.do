@@ -5,19 +5,25 @@ cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\2 25 21"
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room area.xlsx", sheet("Table 1") firstrow clear
 
 rename roomarea floorarea
-label var floorarea "Floor area (sq ft)"
-label var wallarea "Surface area of wall (sq ft)"
+
+replace floorarea = floorarea/3.281
+replace wallarea = wallarea/3.281
+
+label var floorarea "Floor area (sq m)"
+label var wallarea "Surface area of wall (sq m)"
 drop if sampleid == ""
-save roomarea, replace
+save roomarea22521, replace
 
 *room type data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room types.xlsx", firstrow clear
 
 rename iscovid covidspace
+label var covidspace "Sampling space is designated COVID area"
 rename loctype2 locationtype
-drop samploc loctype
+label var locationtype "Type of sampling space"
 
-save newroomtype, replace
+drop samploc loctype
+save newroomtype22521, replace
 
 *lab data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\lab data 2 25 21.csv", clear
@@ -38,51 +44,57 @@ import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw da
 
 rename _submission__id dataid
 rename widthofopenwindowwindow_serialin width
-replace width = width/12
+replace width = (width/12)/3.281
 rename heightofopenwindowwindow_seriali height
-replace height = height/12
+replace height = (height/12)/3.281
 
 gen area = width*height
+
 egen openwinarea = sum(area), by(dataid)
-label var openwinarea "Total surface area of open windows (sq ft)"
+label var openwinarea "Total surface area of open windows (sq m)"
+
+egen smallestopenwinarea = min(area), by(dataid)
+label var smallestopenwinarea "Area of smallest open window (sq m)"
 
 egen tag = tag(dataid)
 drop if tag == 0
-drop ïwindow_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
+drop ïwindow_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag typeofwindow
 
-save windows_21721, replace
+save windows_22521, replace
 
 *door data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\doors 2 25 21.csv", clear
 
 rename _submission__id dataid
 rename widthofopendoordoor_serialinches width
-replace width = width/12
+replace width = (width/12)/3.281
 rename heightofopendoordoor_serialinche height
-replace height = height/12
+replace height = (height/12)/3.281
 
 gen area = width*height
+
 egen opendoorarea = sum(area), by(dataid)
-label var opendoorarea "Total surface area of open doors (sq ft)"
+label var opendoorarea "Total surface area of open doors (sq m)"
+
+egen smallestopendoorarea = min(area), by(dataid)
+label var smallestopendoorarea "Area of smallest open door (sq m)"
 
 egen tag = tag(dataid)
 drop if tag == 0
 drop ïdoor_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
 
-save doors_21721, replace
+save doors_22521, replace
 
 *ward data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\ward data 2 25 21.csv", clear
 
 order sampleid, before(dateofcollection)
 
-drop ïstart end generalinformation turnoffbiosamplerandpumpfollowso takeaphotoofthedrawingoftheroomd __version__ _version_ _version__001 _uuid _validation_status _index setupbiosamplerandpumpaccordingt collectionstart collectionmidpoint ventilationmeasures collectionend co2measurements 
+drop ïstart end generalinformation turnoffbiosamplerandpumpfollowso takeaphotoofthedrawingoftheroomd __version__ _version_ _version__001 _uuid _validation_status _index setupbiosamplerandpumpaccordingt collectionstart collectionmidpoint ventilationmeasures collectionend co2measurements typeofsamplingspace samplinglocation ifotherpleasespecifysamplingloca ifotherpleasespecify
 
 rename dateofcollection colldate
 rename outdoorco2level outdoorco2
 rename hospitalname hosp
-rename samplinglocation samploc
-rename typeofsamplingspace loctype
 rename co2levelatstartofcollectionppm co2start
 rename numberofcovidpatients numcovidstart
 rename numberofnoncovidpatients numnoncovidstart
@@ -150,35 +162,51 @@ label var endtime "End time of air sampling"
 replace hosp = ifotherpleaselisthospitalname if hosp == "Other"
 drop ifotherpleaselisthospitalname
 
-replace samploc = ifotherpleasespecifysamplingloca if samploc == "Other"
-drop ifotherpleasespecifysamplingloca
-
-replace loctype = ifotherpleasespecify if loctype == "Other"
-drop ifotherpleasespecify
-
-*swapping incorrect temp/humidity
+*swapping incorrect temp/humidity and clean
 gen tempstart = ambienttemperaturec 
 gen humiditystart = ambienthumidity
 replace tempstart = ambienthumidity if sampleid == "32_DMC1_R3" | sampleid == "36_DMC2_R7"
 replace humiditystart = ambienttemperaturec  if sampleid == "32_DMC1_R3" | sampleid == "36_DMC2_R7"
+replace tempend = . if tempend == 415
 drop ambienttemperaturec ambienthumidity
 label var tempstart "Ambient temperature at start (C)"
 label var humiditystart "Ambient humidity at start"
+label var tempend "Ambient temperature at end (C)"
+label var humidityend "Ambient humidity at end"
+
+*convert all measurements to meters
+replace roomwidth = roomwidth/3.281
+replace roomlength = roomlength/3.281
+replace roomheight = roomheight/3.281
+replace distpatient = distpatient/3.281
+replace distwindow = distwindow/3.281
+replace distdoor = distdoor/3.281
+label var roomwidth "Room width (m)"
+label var roomlength "Room length (m)"
+label var roomheight "Room height (m)"
+label var distpatient "Distance of air sampler to nearest patient (m)"
+label var distwindow "Distance of air sampler to nearest window (m)"
+label var distdoor "Distance of air sampler to nearest door (m)"
 
 *merge in room area sheet 
 replace sampleid = "87_ICD2_R6" if sampleid == "87_IC2_R6"
-merge 1:1 sampleid using roomarea
+merge 1:1 sampleid using roomarea22521
+
 replace floorarea = roomwidth*roomlength if floorarea == .
-gen roomvol = floorarea * roomheight
-label var roomvol "Room volume (ft cub)"
 replace wallarea = ((roomwidth*roomheight)*2) + ((roomlength*roomheight)*2) if wallarea == .
+drop roomarea
+
 gen surfacearea = wallarea + (floorarea*2)
-label var surfacearea "Total area of surfaces in room (sq ft)"
+label var surfacearea "Total area of surfaces in room (sq m)"
+
+gen roomvol = floorarea * roomheight
+label var roomvol "Room volume (m cub)"
+
 drop _merge
 
 *merge in room type sheet
-merge 1:1 sampleid using newroomtype
-drop samploc loctype _merge
+merge 1:1 sampleid using newroomtype22521
+drop _merge
 
 *merge in windows and doors 
 rename _id dataid
@@ -217,41 +245,47 @@ label var co2endnew "Clean CO2 measurement at end of sample collection"
 egen co2average = rmean(co2startnew-co2endnew)
 label var co2average "Average CO2 measurement over sampling period (using clean measurements)"
 
+*add 1/2 a person for residual CO2 in rooms with 0 people
+replace numpeoplestart = 0.5 if numpeoplestart == 0
+replace numpeoplemid = 0.5 if numpeoplemid == 0
+replace numpeopleend = 0.5 if numpeopleend == 0
+
 *create people average
 egen numpeopleavg = rmean(numpeoplestart numpeoplemid numpeopleend)
 label var numpeopleavg "Average numer of people in room over sampling period"
 
 *create population density variable
-gen popdensitystart = numpeoplestart/roomvol
-gen popdensitymid = numpeoplemid/roomvol
-gen popdensityend = numpeopleend/roomvol
+gen popdensitystart = numpeoplestart/floorarea
+gen popdensitymid = numpeoplemid/floorarea
+gen popdensityend = numpeopleend/floorarea
 egen popdensityavg = rmean(popdensitystart popdensitymid popdensityend)
-label var popdensitystart "People per cubic foot at start of sample collection"
-label var popdensitymid "People per cubic foot at 15 minutes"
-label var popdensityend "People per cubic foot at end of sample collection"
-label var popdensityavg "Average people per cubic foot over sampling period"
+label var popdensitystart "People per square meter (floor) at start of sample collection"
+label var popdensitymid "People per square meter (floor) at 15 minutes"
+label var popdensityend "People per square meter (floor) at end of sample collection"
+label var popdensityavg "Average people per square meter (floor) over sampling period"
 
 *creation ventilation rate variable
 gen ventrate = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
-gen ventrate2 = ((10^6 * 0.0052)/(co2average - outdoorco2new))
+label var ventrate "Ventilation rate (L/s/p)"
 
 *sort by date of collection
 sort colldate
 
 *order variables
-order roomwidth-roomheight roomvol outdoorco2 co2start /// 
-		co2_5min-co2_25min co2end fixco2 co2startnew-co2average, after(loctype)
-order starttime endtime, before(notes)
+order locationtype covidspace roomwidth-roomheight roomvol ///
+		floorarea-surfacearea outdoorco2 co2start co2_5min-co2_25min ///
+		co2end fixco2 outdoorco2new-co2average, after(hosp)
 order numcovidmid-numpeoplemid, after(numpeoplestart)
 order numcovidend-numpeopleend, after(numpeoplemid)
 order numpeopleavg, after(numpeopleend)
-order tempstart humiditystart, before(tempend)
+order tempstart humiditystart, before(humidityend)
 order popdensitystart-popdensityavg, after(numpeopleavg)
-order openwinarea, after(numwinopen)
-order opendoorarea, after(numdooropen)
-order floorarea-surfacearea, after(roomvol)
+order openwinarea smallestopenwinarea, after(numwinopen)
+order opendoorarea smallestopendoorarea, after(numdooropen)
+order starttime endtime submittime notes, after(ventrate)
+
 *save separate ward dataset
-save warddata_21721, replace
+save warddata_22521, replace
 
 *merge in lab data
 merge 1:1 sampleid using labdata_21721
