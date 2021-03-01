@@ -162,6 +162,24 @@ label var endtime "End time of air sampling"
 replace hosp = ifotherpleaselisthospitalname if hosp == "Other"
 drop ifotherpleaselisthospitalname
 
+*fix missing number of people
+replace numstaffstart = 0 if numstaffstart == .
+replace numstaffmid = 0 if numstaffmid == .
+replace numstaffend = 0 if numstaffend == .
+replace numcovidstart = 0 if numcovidstart == .
+replace numcovidmid = 0 if numcovidmid == .
+replace numcovidend = 0 if numcovidend == .
+replace numnoncovidstart = 0 if numnoncovidstart == .
+replace numnoncovidmid = 0 if numnoncovidmid == .
+replace numnoncovidend = 0 if numnoncovidend == .
+replace numotherstart = 0 if numotherstart == .
+replace numothermid = 0 if numothermid == .
+replace numotherend = 0 if numotherend == .
+
+replace numpeoplestart = numstaffstart + numcovidstart + numnoncovidstart + numotherstart if numpeoplestart == .
+replace numpeoplemid = numstaffmid + numcovidmid + numnoncovidmid + numothermid if numpeoplemid == .
+replace numpeopleend = numstaffend + numcovidend + numnoncovidend + numotherend if numpeopleend == .
+
 *swapping incorrect temp/humidity and clean
 gen tempstart = ambienttemperaturec 
 gen humiditystart = ambienthumidity
