@@ -163,22 +163,26 @@ replace hosp = ifotherpleaselisthospitalname if hosp == "Other"
 drop ifotherpleaselisthospitalname
 
 *fix missing number of people
-replace numstaffstart = 0 if numstaffstart == .
-replace numstaffmid = 0 if numstaffmid == .
-replace numstaffend = 0 if numstaffend == .
-replace numcovidstart = 0 if numcovidstart == .
-replace numcovidmid = 0 if numcovidmid == .
-replace numcovidend = 0 if numcovidend == .
-replace numnoncovidstart = 0 if numnoncovidstart == .
-replace numnoncovidmid = 0 if numnoncovidmid == .
-replace numnoncovidend = 0 if numnoncovidend == .
-replace numotherstart = 0 if numotherstart == .
-replace numothermid = 0 if numothermid == .
-replace numotherend = 0 if numotherend == .
+egen sum = rowtotal(numstaffstart numcovidstart numnoncovidstart ///
+		numotherstart)
+replace sum = . if numstaffstart ==. & numcovidstart ==. & ///
+		numnoncovidstart ==. & numotherstart ==.	
+replace numpeoplestart = sum if numpeoplestart == .
+drop sum
 
-replace numpeoplestart = numstaffstart + numcovidstart + numnoncovidstart + numotherstart if numpeoplestart == .
-replace numpeoplemid = numstaffmid + numcovidmid + numnoncovidmid + numothermid if numpeoplemid == .
-replace numpeopleend = numstaffend + numcovidend + numnoncovidend + numotherend if numpeopleend == .
+egen sum = rowtotal(numstaffmid numcovidmid numnoncovidmid ///
+		numothermid)
+replace sum = . if numstaffmid ==. & numcovidmid ==. & ///
+		numnoncovidmid ==. & numothermid ==.
+replace numpeoplemid = sum if numpeoplemid == .
+drop sum
+
+egen sum = rowtotal(numstaffend numcovidend numnoncovidend ///
+		numotherend)
+replace sum = . if numstaffend ==. & numcovidend ==. & ///
+		numnoncovidend ==. & numotherend ==.
+replace numpeopleend = sum if numpeopleend == .
+drop sum
 
 *swapping incorrect temp/humidity and clean
 gen tempstart = ambienttemperaturec 
@@ -282,7 +286,13 @@ label var popdensitymid "People per square meter (floor) at 15 minutes"
 label var popdensityend "People per square meter (floor) at end of sample collection"
 label var popdensityavg "Average people per square meter (floor) over sampling period"
 
-*creation ventilation rate variable
+*create proportion windows/doors open
+gen propwinopen = numwinopen/numwintotal
+label var propwinopen "Proportion of windows in room open, among rooms with windows"
+gen propdooropen = numdooropen/numdoortotal
+label var propdooropen "Proportion of doors in room open"
+
+*created ventilation rate variable
 gen ventrate = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
 label var ventrate "Ventilation rate (L/s/p)"
 
