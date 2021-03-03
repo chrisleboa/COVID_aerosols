@@ -282,7 +282,13 @@ label var popdensitymid "People per square meter (floor) at 15 minutes"
 label var popdensityend "People per square meter (floor) at end of sample collection"
 label var popdensityavg "Average people per square meter (floor) over sampling period"
 
-*creation ventilation rate variable
+*create proportion windows/doors open
+gen propwinopen = numwinopen/numwintotal
+label var propwinopen "Proportion of windows in room open, among rooms with windows"
+gen propdooropen = numdooropen/numdoortotal
+label var propdooropen "Proportion of doors in room open"
+
+*created ventilation rate variable
 gen ventrate = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
 label var ventrate "Ventilation rate (L/s/p)"
 
