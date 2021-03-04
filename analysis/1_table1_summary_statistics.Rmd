@@ -1,0 +1,83 @@
+---
+title: COVID AerosolTable One
+author: Christopher Leboa 
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Libraries
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(haven)
+library(knitr)
+library(tableone)
+
+# Parameters
+data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/2 25 21/mergeddata_22521.dta"
+
+merged_data <- read_dta(file = data_location)
+#===============================================================================
+
+# Code
+```
+
+## Section 1
+```{r}
+list <-
+  c(
+  "roomvol",
+  "co2average", 
+  "numcovidstart",
+  "numcovidend",
+  "numpeopleavg", 
+  "popdensityavg", 
+  "totfan", 
+  "numacon", 
+  "numdoortotal", 
+  "numdoorclosed", 
+  "numwintotal", 
+  "numwinclosed",
+  "ventrate"
+  )
+
+list_notnormal <- c("roomvol")
+
+# stratify by covidspace 
+
+tableOne <- CreateTableOne(vars = list, strata = "covidspace", data = merged_data)
+tablecovidpos <- CreateTableOne(vars = list, strata = "result", data = merged_data)
+table_2 <-  CreateTableOne(vars = list, data = merged_data)
+
+tab_month <- print(tableOne, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+tab_covidpos <- print(tablecovidpos, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+
+# You can use kableone to print a tableone object in a markdown document but it will fail if you add in the notnormal thing like this kableone(tab2)
+
+kableone(tableOne)
+
+summary(table_2)
+
+
+
+write.csv(tab_month, file = "table_one.csv")
+
+write.csv(tab_covidpos, file = "table_one_covidpos.csv")
+
+#end
+
+
+```
+
+
+### Subsection
+
+## Section 2
+
