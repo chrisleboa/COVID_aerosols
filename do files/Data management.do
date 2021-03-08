@@ -238,6 +238,15 @@ drop _merge
 merge 1:1 dataid using doors_22521
 drop _merge dataid
 
+gen wintofloorarea = openwinarea/floorarea
+label var wintofloorarea "Ratio of open window to floor area"
+
+gen doortofloorarea = opendoorarea/floorarea
+label var doortofloorarea "Ratio of open door to floor area"
+
+gen windoortofloorarea = (openwinarea + opendoorarea)/floorarea
+label var windoortofloorarea "Ratio of open window and door to floor area"
+
 *fix one co2 data entry error 
 replace co2end = 427 if co2end == 247
 
@@ -274,7 +283,7 @@ replace numpeopleend = 0.5 if numpeopleend == 0
 
 *create people average
 egen numpeopleavg = rmean(numpeoplestart numpeoplemid numpeopleend)
-label var numpeopleavg "Average numer of people in room over sampling period"
+label var numpeopleavg "Average number of people in room over sampling period"
 
 *create population density variable
 gen popdensitystart = numpeoplestart/floorarea
@@ -286,15 +295,20 @@ label var popdensitymid "People per square meter (floor) at 15 minutes"
 label var popdensityend "People per square meter (floor) at end of sample collection"
 label var popdensityavg "Average people per square meter (floor) over sampling period"
 
-*create proportion windows/doors open
-gen propwinopen = numwinopen/numwintotal
-label var propwinopen "Proportion of windows in room open, among rooms with windows"
-gen propdooropen = numdooropen/numdoortotal
-label var propdooropen "Proportion of doors in room open"
+*create ventilation rate variables
+gen ventratestart = ((10^6 * 0.0052 * numpeoplestart)/(co2startnew - outdoorco2new))/numpeoplestart
+gen ventratemid = ((10^6 * 0.0052 * numpeoplemid)/(co2_15minnew - outdoorco2new))/numpeoplemid
+gen ventrateend = ((10^6 * 0.0052 * numpeopleend)/(co2endnew - outdoorco2new))/numpeopleend
+gen ventrateavg = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
+label var ventratestart "Ventilation rate (L/s/p) at start of sample collection"
+label var ventratemid "Ventilation rate (L/s/p) at 15 min"
+label var ventrateend "Ventilation rate (L/s/p) at end of sample collection"
+label var ventrateavg "Average ventilation rate over sampling period(L/s/p)"
 
-*created ventilation rate variable
-gen ventrate = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
-label var ventrate "Ventilation rate (L/s/p)"
+gen Q = ventrateavg * numpeopleavg
+label var Q "Absolute ventilation rate over sampling period(L/s)"
+
+gen ach = (3600 * Q)/(roomvol * 1000)
 
 *sort by date of collection
 sort colldate
@@ -310,7 +324,7 @@ order tempstart humiditystart, before(humidityend)
 order popdensitystart-popdensityavg, after(numpeopleavg)
 order openwinarea smallestopenwinarea, after(numwinopen)
 order opendoorarea smallestopendoorarea, after(numdooropen)
-order starttime endtime submittime notes, after(ventrate)
+order starttime endtime submittime notes, after(ach)
 
 *save separate ward dataset
 save warddata_22521, replace
@@ -322,4 +336,3 @@ drop if colldate == ""
 
 *save merged dataset
 save mergeddata_22521, replace
-
