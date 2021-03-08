@@ -18,10 +18,15 @@ library(knitr)
 
 ```{r data import}
 #import data
-d <- read_dta(file = "~/Dropbox/COVID aerosols/clean data/1 20 21/mergeddata_12021.dta")
+d <- read_dta(file = "~/Dropbox/COVID aerosols/clean data/2 17 21/mergeddata_21721.dta")
 
 #filtering to test data only
 test <- d %>% filter(colldate != "")
+
+test <- test %>%
+  mutate(result = ifelse(result == "" & n1result == "Detected", "Detected", 
+                  ifelse(result == "" & n1result %in% c("Undetected", "Detected in 1 replicate"), "Undetected", result))) %>%
+  filter(result != "")
 
 test <- test %>%
   mutate(newwindow = ifelse(nearwindowopen %in% c("Closed", "N/A"), "Closed", "Open"),
@@ -84,12 +89,15 @@ ggplot(data = co2.long, aes(x = min, y = co2value, group = sampleid, color = sam
 **Average CO2 value of 30-minute air sampling period by qPCR result**  
 ```{r}
 results <- test %>%
-  filter(sampletype == "TEST")
+  mutate(newresult = ifelse(result == "Detected", 1, 0))
 
 ggplot(data = results, aes(x = result, y = co2average)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(aes(x = result, y = co2average, color = loctype)) +
   labs(x = "qPCR result", y = "Average CO2 (ppm)", color = "Type of\nsampling space")
+
+model <- glm(newresult ~ co2average + numpeopleavg, data = results)
+t.test(results$co2average, results$newresult)
 ```
 
 \newpage  
@@ -180,10 +188,13 @@ ggplot(data = total.long, aes(x = popdensity, y = openwindoorarea, color = co2va
 ```
 
 ```{r}
+total.long <- total.long %>%
+  mutate(v1 = "")
+
 ggplot(data = total.long) +
-  geom_jitter(aes(y = co2value, x = loctype)) + 
+  geom_jitter(aes(y = co2value, x = v1)) + 
   geom_hline(yintercept = 500, color = "red") +
-  labs(y = "CO2 value (ppm)", x = "Location Type")
+  labs(y = "CO2 value (ppm)", x = "")
 ```
 
 
