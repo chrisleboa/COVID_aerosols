@@ -25,6 +25,7 @@ data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/2 25 21/me
 
 merged_data <- 
   read_dta(file = data_location) %>% 
+  filter(ach < 40) %>%  ## removing sample point with really high ACH value 
   mutate(
     any_acon = if_else(numacon > 0 , "has air cond.", "no acon"),
     private =
@@ -36,15 +37,6 @@ merged_data <-
   )
 
 #table(merged_data$private)
-
-
-#===============================================================================
-
-# Code
-```
-
-## Section 1
-```{r}
 list <-
   c(
   "roomvol",
@@ -62,13 +54,61 @@ list <-
   "numdoorclosed", 
   "numwintotal", 
   "numwinclosed",
-  "windowtofloorarea",
+  "wintofloorarea",
   "ach",
   "ventrateavg"
-  
   )
 
-list_notnormal <- c("roomvol")
+list_notnormal <- 
+   c(
+  "roomvol",
+  "co2average", 
+  #"tempstart",     #Histogram showed these two to be normally distributed 
+  #"humiditystart",
+  "numcovidstart",
+  "numpeopleavg", 
+  "numstaffstart",
+  "popdensityavg", 
+  "totfan", 
+  "numacon", 
+  "numdoortotal", 
+  "doortofloorarea",
+  "numdoorclosed", 
+  "numwintotal", 
+  "numwinclosed",
+  "wintofloorarea",
+  "ach",
+  "ventrateavg"
+  )
+
+
+#===============================================================================
+
+
+```
+
+## Check normality of variables 
+```{r}
+histogram_fun = function(x) {
+     ggplot(merged_data, aes_string(x = x) ) +
+          geom_histogram() + 
+          theme_bw() 
+}
+
+# histogram_fun(x = "roomvol") ## Testing fxn on one variable 
+
+all_plots <- map(list, ~histogram_fun(.x))
+
+
+all_plots
+```
+The histograms show that 
+
+## Section 1
+```{r}
+
+
+
 
 # stratify by covidspace 
 
@@ -94,22 +134,16 @@ kableone(table_1_covidspace)
 kableone(table_1_location)
 kableone(table_1_acon)
 
-summary(table_2)
+summary(table_1_covidspace)
 
 
 
-write.csv(tab_1_covidspace, file = "table_one_covidspace.csv")
-write.csv(tab_1_location, file = "tab_1_location.csv")
-write.csv(tab_1_acon, file = "tab_1_acon.csv")
+write.csv(tab_1_covidspace, file = "output/tab_1_covidspace.csv")
+write.csv(tab_1_location, file = "output/tab_1_location.csv")
+write.csv(tab_1_acon, file = "output/tab_1_acon.csv")
 
-write.csv(tab_2_covidpos, file = "tab_2_covidpos.csv")
+write.csv(tab_2_covidpos, file = "output/tab_2_covidpos.csv")
 
 #end
-
-merged_data %>% 
-  filter(ach < 40) %>% 
-  ggplot() +
-  geom_histogram(aes(ach)) 
-  
 ```
 
