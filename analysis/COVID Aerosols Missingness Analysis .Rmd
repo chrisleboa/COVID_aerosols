@@ -1,0 +1,115 @@
+---
+title: "Investigating Missingness"
+author: "Chris LeBoa"
+date: "3/10/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Investigating Missingness 
+
+```{r, include=FALSE}
+# Libraries
+library(tidyverse)
+library(haven)
+
+# Parameters
+data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/2 25 21/mergeddata_22521.dta"
+merged_data <- read_dta(file = data_location)
+```
+
+```{r}
+merged_data %>%
+  mutate(across(2:last_col(), is.na)) %>%  # replace all NA with TRUE and else FALSE
+  pivot_longer(-sampleid, names_to = "var") %>%  # pivot longer
+  filter(value) %>%   # remove the FALSE rows
+  group_by(sampleid) %>%    # group by the ID
+  summarise(`Missing Variables` = toString(var)) %>% 
+  write_csv("missingness.csv")# convert the variable names to a string column
+
+```
+
+#Window Open Area
+```{r}
+merged_data %>% 
+  filter(is.na(openwinarea))
+```
+
+For the most part this is NA for when the number of windows open is 0. In four instances there Is also an NA for NumWinOpen 
+
+We should discuss those four 
+
+```{r}
+merged_data %>% 
+  filter(is.na(numwinopen)) %>% 
+  select(sampleid, colldate, locationtype)
+```
+
+#Door Open Area 
+For the total door open area these should all be 0 since they all have 0 doors open 
+
+for icd1_r1 there are a list of 3 open doors but the open door area parameter reads 0. Why? 
+```{r}
+merged_data %>% 
+  filter(is.na(opendoorarea)) %>% 
+  select(numdooropen)
+
+merged_data %>% 
+  filter(is.na(smallestopendoorarea)) %>% 
+  select(sampleid, opendoorarea, numdooropen)
+```
+
+For the two that are missing temp end measurements we should add the temp that they started at 
+```{r}
+merged_data %>% 
+  filter(is.na(tempend)) %>% 
+  select(sampleid, tempstart)
+```
+
+
+and for the sample missing a starting temperature we should add the ending temperature 
+```{r}
+merged_data %>% 
+  filter(is.na(tempstart)) %>% 
+  select(sampleid, tempend)
+```
+
+For the window to floor area measure we should hand calculate sample 5, add in 0 to the open window area for rooms with no open windows 
+```{r}
+merged_data %>% 
+  filter(is.na(windoortofloorarea)) %>% 
+  select(sampleid, openwinarea, numwintotal, numwinopen, floorarea)
+```
+
+For sample missing a humidity at the start we add the humidity from the end and vice versa
+```{r}
+merged_data %>% 
+  filter(is.na(humiditystart)) %>% 
+  select(sampleid, humidityend)
+```
+
+For the smallest open door area only the first sample had problems - says 3 doors but no area measure 
+
+Rest should be 0 
+```{r}
+merged_data %>% 
+  filter(is.na(smallestopendoorarea)) %>% 
+  select(sampleid, numdooropen, numdoorfullopen, numdoortotal)
+```
+
+
+
+There are no missing middle ventilation rates so we do not have to worry about replacement 
+```{r}
+merged_data %>% 
+  filter(is.na(ventratemid)) %>% 
+  select(sampleid, ventratestart, ventrateend, ventrateavg)
+
+merged_data %>% 
+  filter(is.na(ventrateavg)) %>% 
+  select(sampleid, ventratestart, ventrateend, ventratemid)
+```
+

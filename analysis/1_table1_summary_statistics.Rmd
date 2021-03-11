@@ -23,7 +23,21 @@ library(tableone)
 # Parameters
 data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/2 25 21/mergeddata_22521.dta"
 
-merged_data <- read_dta(file = data_location)
+merged_data <- 
+  read_dta(file = data_location) %>% 
+  mutate(
+    any_acon = if_else(numacon > 0 , "has air cond.", "no acon"),
+    private =
+      if_else(
+      str_detect(
+        hosp,
+        "icddr|vercare|quare"), "private", "public"
+      )
+  )
+
+#table(merged_data$private)
+
+
 #===============================================================================
 
 # Code
@@ -35,49 +49,67 @@ list <-
   c(
   "roomvol",
   "co2average", 
+  "tempstart",
+  "humiditystart",
   "numcovidstart",
-  "numcovidend",
   "numpeopleavg", 
+  "numstaffstart",
   "popdensityavg", 
   "totfan", 
   "numacon", 
   "numdoortotal", 
+  "doortofloorarea",
   "numdoorclosed", 
   "numwintotal", 
   "numwinclosed",
-  "ventrate"
+  "windowtofloorarea",
+  "ach",
+  "ventrateavg"
+  
   )
 
 list_notnormal <- c("roomvol")
 
 # stratify by covidspace 
 
-tableOne <- CreateTableOne(vars = list, strata = "covidspace", data = merged_data)
-tablecovidpos <- CreateTableOne(vars = list, strata = "result", data = merged_data)
+table_1_covidspace <- CreateTableOne(vars = list, strata = "covidspace", data = merged_data)
+table_1_location <- CreateTableOne(vars = list, strata = "private", data = merged_data)
+table_1_acon <- CreateTableOne(vars = list, strata = "any_acon", data = merged_data)
+
+
+table_2_covidpos <- CreateTableOne(vars = list, strata = "result", data = merged_data)
+
+
 table_2 <-  CreateTableOne(vars = list, data = merged_data)
 
-tab_month <- print(tableOne, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
-tab_covidpos <- print(tablecovidpos, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+tab_1_covidspace <- print(table_1_covidspace, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+tab_1_location <- print(table_1_location, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+tab_1_acon <- print(table_1_acon, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+
+tab_2_covidpos <- print(table_2_covidpos, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
 
 # You can use kableone to print a tableone object in a markdown document but it will fail if you add in the notnormal thing like this kableone(tab2)
 
-kableone(tableOne)
+kableone(table_1_covidspace)
+kableone(table_1_location)
+kableone(table_1_acon)
 
 summary(table_2)
 
 
 
-write.csv(tab_month, file = "table_one.csv")
+write.csv(tab_1_covidspace, file = "table_one_covidspace.csv")
+write.csv(tab_1_location, file = "tab_1_location.csv")
+write.csv(tab_1_acon, file = "tab_1_acon.csv")
 
-write.csv(tab_covidpos, file = "table_one_covidpos.csv")
+write.csv(tab_2_covidpos, file = "tab_2_covidpos.csv")
 
 #end
 
-
+merged_data %>% 
+  filter(ach < 40) %>% 
+  ggplot() +
+  geom_histogram(aes(ach)) 
+  
 ```
-
-
-### Subsection
-
-## Section 2
 
