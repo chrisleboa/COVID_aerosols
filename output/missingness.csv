@@ -1,0 +1,61 @@
+sampleid,Missing Variables
+02_ICD1_R2,"doortofloorarea, numwintotal, wintofloorarea"
+03_SR1_R1,"numwintotal, wintofloorarea"
+05_SR1_R3,"numstaffstart, doortofloorarea"
+07_SH1_R2,wintofloorarea
+09_KGH1_R1,wintofloorarea
+14_KGH3_R6,wintofloorarea
+19_KGH5_R10,wintofloorarea
+20_SQ1_R1,wintofloorarea
+21_SQ1_R2,wintofloorarea
+22_SQ2_R3,"doortofloorarea, wintofloorarea"
+23_SQ2_R4,"doortofloorarea, wintofloorarea"
+24_SQ3_R5,"doortofloorarea, wintofloorarea"
+25_SQ3_R6,"doortofloorarea, wintofloorarea"
+26_SQ3_R7,wintofloorarea
+27_SQ4_R8,wintofloorarea
+28_SQ4_R9,wintofloorarea
+29_SQ4_R10,wintofloorarea
+32_DMC1_R3,wintofloorarea
+35_DMC2_R6,wintofloorarea
+38_DMC3_R9,wintofloorarea
+39_DMC3_R10,"doortofloorarea, wintofloorarea"
+40_DMC4_R11,wintofloorarea
+41_DMC4_R12,wintofloorarea
+44_DMC5_R15,wintofloorarea
+46_DMC6_R17,wintofloorarea
+47_DMC6_R18,wintofloorarea
+48_DMC6_R19,wintofloorarea
+49_DMC6_R20,wintofloorarea
+50_MM1_R1,"numacon, wintofloorarea"
+51_MM1_R2,wintofloorarea
+52_MM1_R3,"totfan, wintofloorarea"
+54_MM2_R5,wintofloorarea
+56_MM3_R7,wintofloorarea
+59_KM1_R1,wintofloorarea
+60_KM1_R2,wintofloorarea
+61_KM1_R3,wintofloorarea
+62_KM2_R4,"doortofloorarea, wintofloorarea"
+64_KM2_R6,"doortofloorarea, numwintotal, wintofloorarea"
+65_EC1_R1,numcovidstart
+66_EC1_R2,"doortofloorarea, wintofloorarea"
+67_EC1_R3,wintofloorarea
+68_EC2_R4,"doortofloorarea, wintofloorarea"
+69_EC2_R5,"doortofloorarea, wintofloorarea"
+70_EC2_R6,"doortofloorarea, wintofloorarea"
+71_EC3_R7,"doortofloorarea, wintofloorarea"
+72_EC3_R8,"doortofloorarea, wintofloorarea"
+73_EC3_R9,"doortofloorarea, wintofloorarea"
+74_EC4_R10,"numcovidstart, wintofloorarea"
+75_EC4_R11,wintofloorarea
+76_EC4_R12,"numcovidstart, numstaffstart, doortofloorarea, wintofloorarea"
+77_EC5_R13,wintofloorarea
+78_EC5_R14,"numwintotal, wintofloorarea"
+79_EC5_R15,"doortofloorarea, wintofloorarea"
+80_EC5_R16,"tempstart, humiditystart, wintofloorarea"
+81_SH2_R4,wintofloorarea
+83_SH2_R6,wintofloorarea
+84_ICD2_R3,wintofloorarea
+85_ICD2_R4,wintofloorarea
+86_ICD2_R5,wintofloorarea
+87_ICD2_R6,"doortofloorarea, wintofloorarea"

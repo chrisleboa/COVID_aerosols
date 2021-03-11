@@ -19,16 +19,40 @@ library(haven)
 # Parameters
 data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/2 25 21/mergeddata_22521.dta"
 merged_data <- read_dta(file = data_location)
+
+
+#Variables of intrest
+list <-
+  c(
+  "roomvol",
+  "co2average", 
+  "tempstart",
+  "humiditystart",
+  "numcovidstart",
+  "numpeopleavg", 
+  "numstaffstart",
+  "popdensityavg", 
+  "totfan", 
+  "numacon", 
+  "numdoortotal", 
+  "doortofloorarea",
+  "numdoorclosed", 
+  "numwintotal", 
+  "numwinclosed",
+  "wintofloorarea",
+  "ach",
+  "ventrateavg"
+  )
 ```
 
 ```{r}
 merged_data %>%
-  mutate(across(2:last_col(), is.na)) %>%  # replace all NA with TRUE and else FALSE
-  pivot_longer(-sampleid, names_to = "var") %>%  # pivot longer
+  mutate(across(list, is.na)) %>%  # replace all NA with TRUE and else FALSE
+  pivot_longer(list, names_to = "var") %>%  # pivot longer
   filter(value) %>%   # remove the FALSE rows
   group_by(sampleid) %>%    # group by the ID
   summarise(`Missing Variables` = toString(var)) %>% 
-  write_csv("missingness.csv")# convert the variable names to a string column
+  write_csv(here::here("output/missingness.csv"))# convert the variable names to a string column
 
 ```
 
