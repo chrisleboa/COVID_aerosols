@@ -1,5 +1,5 @@
 clear all
-cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\2 25 21"
+cd "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\clean data\Final dataset"
 
 *room area data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room area.xlsx", sheet("Table 1") firstrow clear
@@ -12,7 +12,7 @@ replace wallarea = wallarea/3.281
 label var floorarea "Floor area (sq m)"
 label var wallarea "Surface area of wall (sq m)"
 drop if sampleid == ""
-save roomarea22521, replace
+save roomarea_final, replace
 
 *room type data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room types.xlsx", firstrow clear
@@ -23,7 +23,7 @@ rename loctype2 locationtype
 label var locationtype "Type of sampling space"
 
 drop samploc loctype
-save newroomtype22521, replace
+save newroomtype_final, replace
 
 *lab data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\lab data 2 25 21.csv", clear
@@ -37,7 +37,7 @@ rename rnaextractiondate rnadate
 drop if sampleid == "" | sampleid == "Negative control:"
 duplicates drop
 
-save labdata_22521, replace
+save labdata_final, replace
 
 *window data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\windows 2 25 21.csv", clear
@@ -60,7 +60,7 @@ egen tag = tag(dataid)
 drop if tag == 0
 drop ïwindow_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag typeofwindow
 
-save windows_22521, replace
+save windows_final, replace
 
 *door data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\doors 2 25 21.csv", clear
@@ -83,7 +83,7 @@ egen tag = tag(dataid)
 drop if tag == 0
 drop ïdoor_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag
 
-save doors_22521, replace
+save doors_final, replace
 
 *ward data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\ward data 2 25 21.csv", clear
@@ -196,6 +196,11 @@ label var humiditystart "Ambient humidity at start"
 label var tempend "Ambient temperature at end (C)"
 label var humidityend "Ambient humidity at end"
 
+replace tempend = tempstart if tempend == .
+replace tempstart = tempend if tempstart == .
+replace humiditystart = humidityend if humiditystart == .
+replace humidityend = humiditystart if humidityend == .
+
 *convert all measurements to meters
 replace roomwidth = roomwidth/3.281
 replace roomlength = roomlength/3.281
@@ -203,6 +208,7 @@ replace roomheight = roomheight/3.281
 replace distpatient = distpatient/3.281
 replace distwindow = distwindow/3.281
 replace distdoor = distdoor/3.281
+replace distwindow = . if distwindow == 0
 label var roomwidth "Room width (m)"
 label var roomlength "Room length (m)"
 label var roomheight "Room height (m)"
@@ -212,7 +218,7 @@ label var distdoor "Distance of air sampler to nearest door (m)"
 
 *merge in room area sheet 
 replace sampleid = "87_ICD2_R6" if sampleid == "87_IC2_R6"
-merge 1:1 sampleid using roomarea22521
+merge 1:1 sampleid using roomarea_final
 
 replace floorarea = roomwidth*roomlength if floorarea == .
 replace wallarea = ((roomwidth*roomheight)*2) + ((roomlength*roomheight)*2) if wallarea == .
@@ -227,16 +233,31 @@ label var roomvol "Room volume (m cub)"
 drop _merge
 
 *merge in room type sheet
-merge 1:1 sampleid using newroomtype22521
+merge 1:1 sampleid using newroomtype_final
 drop _merge
 
 *merge in windows and doors 
 rename _id dataid
-merge 1:1 dataid using windows_22521
+merge 1:1 dataid using windows_final
+
+replace numwinfullopen = 0 if numwinfullopen == .
+replace numwinopen = 0 if numwinopen == .
+replace numwintotal = numwinclosed + numwinpartopen + numwinfullopen
+replace openwinarea = 0 if numwinopen == 0
+replace smallestopenwinarea = 0 if smallestopenwinarea == .
+gen propwinpartopen = numwinpartopen/numwintotal
+
 drop _merge
 
-merge 1:1 dataid using doors_22521
+merge 1:1 dataid using doors_final
+replace numdoortotal = 1 if numdoortotal == 0
+replace numdoorclosed = 1 if numdoorclosed == 0
+replace opendoorarea = 0 if opendoorarea == .
+replace smallestopendoorarea = 0 if smallestopendoorarea == .
 drop _merge dataid
+
+gen totalopenarea = openwinarea + opendoorarea
+label var totalopenarea "Total open door and window area"
 
 gen wintofloorarea = openwinarea/floorarea
 label var wintofloorarea "Ratio of open window to floor area"
@@ -244,14 +265,14 @@ label var wintofloorarea "Ratio of open window to floor area"
 gen doortofloorarea = opendoorarea/floorarea
 label var doortofloorarea "Ratio of open door to floor area"
 
-gen windoortofloorarea = (openwinarea + opendoorarea)/floorarea
+gen windoortofloorarea = totalopenarea/floorarea
 label var windoortofloorarea "Ratio of open window and door to floor area"
 
 *fix one co2 data entry error 
 replace co2end = 427 if co2end == 247
 
 *fix co2 levels
-gen fixco2 = outdoorco2 - 410 if outdoorco2 > 430
+gen fixco2 = outdoorco2 - 400 if outdoorco2 > 430
 replace fixco2 = 0 if fixco2 == .
 label var fixco2 "Adjustment made to interior CO2 measurements from calibration check"
 gen outdoorco2new = outdoorco2 - fixco2
@@ -305,6 +326,9 @@ label var ventratemid "Ventilation rate (L/s/p) at 15 min"
 label var ventrateend "Ventilation rate (L/s/p) at end of sample collection"
 label var ventrateavg "Average ventilation rate over sampling period(L/s/p)"
 
+*drop observation with large ventilation rate
+drop if ventrateavg > 2000
+
 gen Q = ventrateavg * numpeopleavg
 label var Q "Absolute ventilation rate over sampling period(L/s)"
 
@@ -327,12 +351,12 @@ order opendoorarea smallestopendoorarea, after(numdooropen)
 order starttime endtime submittime notes, after(ach)
 
 *save separate ward dataset
-save warddata_22521, replace
+save warddata_final, replace
 
 *merge in lab data
-merge 1:1 sampleid using labdata_22521
+merge 1:1 sampleid using labdata_final
 drop collectionsite roomtype collectiondate comments _merge
 drop if colldate == ""
 
 *save merged dataset
-save mergeddata_22521, replace
+save mergeddata_final, replace
