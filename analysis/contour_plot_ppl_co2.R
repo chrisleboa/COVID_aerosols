@@ -14,9 +14,31 @@ merged_data <- read_dta(file = data_location)
 #===============================================================================
 #Code
 
+dataset <- 
+  tibble(
+  num_people = seq(1,100,5),
+  co2 = seq(500, 2400, 100)
+)
+
+dataset_expanded <- 
+  expand.grid(dataset) %>% 
+  mutate(
+    co2 = as.double(co2), 
+    num_people = as.double(num_people),
+    density =  ((10^6 * 0.0052 *  num_people) / (co2 - 410)) 
+  )
+
+glimpse(dataset_expanded)
+
+
+
+dataset_expanded %>% 
+  ggplot(aes(num_people, co2, z = density)) +
+  geom_contour_filled(breaks = c(0, 60, 120, 180, 500, 1000, 10000))
+
 merged_data %>% 
   ggplot(aes(numpeopleavg, co2average)) +
-  geom_point()
+  geom_density2d_filled()
 
 merged_data %>% 
 ggplot( aes(x=numpeopleavg, y=co2average, group=result, fill=result)) +
@@ -30,11 +52,9 @@ f <- function(x,z) {
   (10^6 * 0.0052 * x) / (z - 400) / x
 }
 
-#f2 <- Vectorize(f, )
 
-base <- ggplot()
 
-base + 
-  geom_function(fun = f, args = list(z=500)) +
- geom_function(fun = f, args = list(z=1000)) +
- geom_function(fun = f, args = list(z= 1500))
+## Caitlin's solution
+
+
+f
