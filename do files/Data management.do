@@ -184,6 +184,9 @@ replace sum = . if numstaffend ==. & numcovidend ==. & ///
 replace numpeopleend = sum if numpeopleend == .
 drop sum
 
+*fix fans and ACs
+replace numfanon = 0 if totfan == 0
+
 *swapping incorrect temp/humidity and clean
 gen tempstart = ambienttemperaturec 
 gen humiditystart = ambienthumidity
