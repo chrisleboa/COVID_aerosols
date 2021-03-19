@@ -15,3 +15,5 @@ dropboxDir <- NULL
 if(dir.exists("/Users/caitlinhemlock/Dropbox/COVID aerosols/")){ 
   dropboxDir <- "/Users/caitlinhemlock/Dropbox/COVID aerosols/"
 }
+
+
