@@ -1,0 +1,255 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+#import data
+rm(list=ls())
+source(here::here("configuration.R"))
+
+#library(SmartEDA)
+library(reshape2)
+library(GGally)
+library(knitr)
+library(dummies)
+library(glmnet)
+library(plotmo)
+```
+
+```{r}
+d <- read_dta(paste0(dropboxDir, "/clean data/Final dataset/mergeddata_final.dta"))
+d[d == ""] <- NA
+
+#reframe these measures to be - is a window/door open nearby? 
+d <- d %>%
+  mutate(windowopennear = ifelse(nearwindowopen == "Open", 1, 
+                                 ifelse(nearwindowopen == "Closed", 0, NA)),
+         windowopennear = ifelse(is.na(windowopennear), 0, windowopennear),
+         dooropennear = ifelse(neardooropen == "Open", 1, 
+                                 ifelse(neardooropen == "Closed", 0, NA)),
+         dooropennear = ifelse(is.na(dooropennear), 0, dooropennear))
+
+#exploratory data analysis
+#ExpCatViz(d)
+#ExpNumViz(d)
+
+#select ventilation measures of interest
+vent.measures <- d %>%
+  select(sampleid, roomheight, roomvol, surfacearea, wallarea, floorarea, 
+         openwinarea, wintofloorarea,
+         opendoorarea, doortofloorarea, 
+         totalopenarea, windoortofloorarea,
+         numfanon, numacon, tempstart, humiditystart,
+         distwindow, distdoor, windowopennear, dooropennear)
+
+```
+
+### Visualize correlation of covariates
+```{r}
+#test correlation of measures for numeric variables
+ggcorr(vent.measures[,-c(1)], label = TRUE, label_round = 2, label_size = 3, hjust = 1)
+```
+
+All are not positively correlated, which is good. Can gain information from variability. Remove surface area and wallarea as they are almost perfectly correlated with room volume.
+
+### Look at bivariate relationships
+```{r}
+vent.measures <- vent.measures %>% select(-surfacearea, -wallarea)
+d$locationtype <- factor(d$locationtype, levels = c("Open ward", "Bathroom", "Cabin", "Canteen", "Doffing room", "Sample collection", "OPD"))
+
+ggplot(data = d, aes(x = openwinarea, y = ventrateavg)) + 
+  geom_smooth(method = 'gam', ) +
+  geom_point(aes(color = locationtype)) 
+
+#can see clustering by location type - check facet by location type
+ggplot(data = d, aes(x = openwinarea, y = ventrateavg)) + 
+  geom_smooth(method = 'gam', ) +
+  geom_point(aes(color = locationtype)) +
+  facet_wrap(~locationtype)
+
+#remove canteen for data sparsity
+total.filt <- d %>% filter(locationtype != "Canteen")
+
+#filter out X variable outliers for univariate models (need to use separate dataset for each model to maximize sample size)
+total.filt1 <- total.filt %>% filter(roomvol < 5000) #for all room measurements
+total.filt2 <- total.filt %>% filter(wintofloorarea < 0.25)
+total.filt3 <- total.filt %>% filter(opendoorarea < 30)
+total.filt4 <- total.filt %>% filter(windoortofloorarea < 0.2)
+```
+Decision: include location type as a fixed effect in all models
+
+### Univariable models using linear regression models
+```{r}
+#univariate linear models
+names <- names(vent.measures[-1])
+all.res <- NULL
+
+for (i in 1:length(names)){
+  if(names[[i]] %in% c("roomvol", "floorarea")){
+      model <- lm(as.formula(paste("ventrateavg ~ ", names[[i]], " + locationtype", sep = "")), 
+                  data = total.filt1)
+      res <- broom::tidy(model, conf.int = TRUE)
+      res <- cbind(res[2,1], res[2,c(2,6,7,5)])
+      all.res <- as.data.frame(rbind(all.res, res))
+  } else if (names[[i]] %in% c("wintofloorarea")){
+      model <- lm(as.formula(paste("ventrateavg ~ ", names[[i]], " + locationtype", sep = "")), 
+                  data = total.filt2)
+      res <- broom::tidy(model, conf.int = TRUE)
+      res <- cbind(res[2,1], res[2,c(2,6,7,5)])
+      all.res <- as.data.frame(rbind(all.res, res))
+  } else if (names[[i]] %in% c("opendoorarea")){
+      model <- lm(as.formula(paste("ventrateavg ~ ", names[[i]], " + locationtype", sep = "")), 
+                  data = total.filt3)
+      res <- broom::tidy(model, conf.int = TRUE)
+      res <- cbind(res[2,1], res[2,c(2,6,7,5)])
+      all.res <- as.data.frame(rbind(all.res, res))
+  } else if (names[[i]] %in% c("windoortofloorarea")){
+      model <- lm(as.formula(paste("ventrateavg ~ ", names[[i]], " + locationtype", sep = "")), 
+                  data = total.filt4)
+      res <- broom::tidy(model, conf.int = TRUE)
+      res <- cbind(res[2,1], res[2,c(2,6,7,5)])
+      all.res <- as.data.frame(rbind(all.res, res))
+  } else {
+      model <- lm(as.formula(paste("ventrateavg ~ ", names[[i]], " + locationtype", sep = "")), 
+                  data = total.filt)
+      res <- broom::tidy(model, conf.int = TRUE)
+      res <- cbind(res[2,1], res[2,c(2,6,7,5)])
+      all.res <- as.data.frame(rbind(all.res, res))
+    }
+}
+
+#visualize univariate coefficients
+sig.names <- all.res[all.res$p.value < 0.05,1]
+
+all.res.long <- melt(all.res[,-5], id = "term")
+all.res.long <- all.res.long %>%
+  rename(Variable = term) %>%
+  mutate(sig = as.factor(ifelse(Variable %in% sig.names, "Significant", "Not Significant")))
+
+ggplot(data = all.res.long) +
+  geom_point(aes(x = reorder(Variable, value), y = value, color = sig))+
+  geom_line(aes(x = Variable, y = value, group = Variable, color = sig)) +
+  geom_hline(yintercept = 0, colour = "red") +
+  labs(color = "Significance", y = "Mean Difference for a 1-unit change", x = "Variable") +
+  coord_flip() +
+  scale_color_manual(values = c("dark gray", "black")) 
+
+```
+
+
+Decision: include temperature, humidity, window open nearby, and door open nearby in multivariable model as a nuisance parameter  
+
+### Multivariable model using LASSO regression
+```{r}
+#multivariate model
+#check missingness - need complete cases
+check <- colSums(is.na(vent.measures))
+
+#filter variables with missing data and extreme outliers
+vent <- total.filt %>% 
+  dplyr::select(all_of(names(vent.measures)), locationtype, ventrateavg, 
+                -distwindow, -distdoor, -sampleid) %>% 
+  filter(roomvol < 5000 & wintofloorarea < 0.25 & 
+           opendoorarea < 30 & windoortofloorarea < 0.2)
+
+#create matrix of predictor variables
+loctype.dummy <- dummy(vent$locationtype)
+colnames(loctype.dummy) <- c("Open Ward", "Bathroom", "Cabin", "Doffing Room", "Sample Collection", "OPD")
+vent.matrix <- as.matrix(cbind(vent[complete.cases(vent), 1:15], loctype.dummy[,-1]))
+
+#run LASSO regression
+set.seed(123)
+mod <- glmnet::glmnet(vent.matrix, vent$ventrateavg, family = "gaussian", alpha = 1)
+cvfit <- glmnet::cv.glmnet(vent.matrix, vent$ventrateavg, family = "gaussian", alpha = 1, type.measure = "mse")
+
+#extract coefficients
+glmcoef <- coef(mod, cvfit$lambda.min)
+
+coef.increase<-dimnames(glmcoef[glmcoef[,1]>0,0])[[1]]
+coef.decrease<-dimnames(glmcoef[glmcoef[,1]<0,0])[[1]]
+
+#get ordered list of variables as they appear at smallest lambda
+allnames<-names(coef(mod)[,
+    ncol(coef(mod))][order(coef(mod)[,
+    ncol(coef(mod))],decreasing=TRUE)])
+
+#remove intercept
+allnames<-setdiff(allnames,allnames[grep("Intercept",allnames)])
+
+#assign colors
+cols<-rep("gray",length(allnames))
+cols[allnames %in% coef.increase]<-"green"      # higher ventilation is good
+cols[allnames %in% coef.decrease]<-"red"        # lower ventilation is not
+
+```
+
+### Plot shrinkage
+```{r}
+plot_glmnet(mod,label=TRUE,s=cvfit$lambda.min,col=cols)
+
+#get coefficient table
+coefficient <- data.frame(glmcoef[-1,1])
+            
+coefficient <- cbind(rownames(coefficient), coefficient)
+rownames(coefficient) <- c(1:nrow(coefficient))
+colnames(coefficient) <- c("Variable", "Coefficient")
+
+labels <- c("Room height (m)", "Room volume (m^3)","Floor area (m^2)",  "Open window area (m^2)",
+            "Ratio of open window area to floor area",
+            "Open door area (m^2)", "Ratio of open door area to floor area",
+            "Total open window and door area (m^2)",  "Ratio of open window and door area to floor area",
+             "Number of fans on",  "Number of AC on", "Temperature (C)", "Humidity",
+            "Open window nearby", "Open door nearby", "Bathroom", "Cabin", "Doffing Room", 
+            "Sample Collection", "OPD")
+
+coefficient %>% mutate(Variable = labels) %>% arrange(-Coefficient) %>% kable()
+
+```
+Reference level for location type = "Open Ward"  
+Coefficients of 0 are less important - have been shrunk to 0 using lambda penalization  
+
+### Obtain elasticity from unadjusted and adjusted coefficients
+```{r}
+coefficient <- coefficient %>%
+  filter(Coefficient != 0) %>%
+  filter(Variable !=  "Bathroom" & Variable != "Cabin"
+         & Variable != "Canteen" & Variable !=  "Doffing Room" & Variable !=  "Sample Collection"
+         & Variable != "OPD") 
+
+#elasticity
+all.res <- all.res %>% rename(Variable = term)
+fullmodels <- left_join(all.res, coefficient, by = "Variable")
+fullmodels <- fullmodels %>% filter(Variable != "distwindow" & Variable != "distdoor")
+
+for (i in 1:nrow(fullmodels)){
+  var <- fullmodels$Variable[i]
+  temp <- as.matrix(vent[,var])
+  fullmodels$unadj.elas[i] <- round(fullmodels$estimate[i] * (mean(temp, na.rm = TRUE) / mean(vent$ventrateavg)), 3)
+  fullmodels$adj.elas[i] <- round(fullmodels$Coefficient[i] * (mean(temp, na.rm = TRUE) / mean(vent$ventrateavg)), 3)
+}
+
+fullmodels <- cbind(labels = labels[-c(16:20)], fullmodels)
+
+fullmodels <- fullmodels %>%
+  mutate(unadjusted = paste(round(estimate, 2), " (", round(conf.low, 2), ", ", round(conf.high, 2), ")", sep = ""),
+         lasso = round(Coefficient, 2), Variable = labels) %>%
+  select(Variable, unadjusted, unadj.elas, lasso, adj.elas) %>%
+  arrange(-adj.elas) 
+
+fullmodels[is.na(fullmodels)] <- "-"
+colnames(fullmodels) <- c("Variable", "Mean difference (95% CI)*", "Elasticity^ from unadjusted model", "LASSO coefficient", "Elasticity from adjusted model")
+
+fullmodels %>% kable()
+```
+*Estimated using linear regression models adjusted for location type  
+^Interpreted as the percentage change in ventilation rate for a percent increase in the given variable
