@@ -162,6 +162,17 @@ label var endtime "End time of air sampling"
 replace hosp = ifotherpleaselisthospitalname if hosp == "Other"
 drop ifotherpleaselisthospitalname
 
+*clean distpatient and distwindow variables
+replace distpatient = . if distpatient == 999 
+replace distwindow = . if distwindow == 999
+
+*clean numdoors
+replace numdoorclosed = 2 if sampleid == "43_DMC5_R14"
+replace numdoortotal = 6 if sampleid == "43_DMC5_R14"
+
+*clean neardooropen and nearwinopen
+replace nearwindowopen = "" if nearwindowopen == "N/A"
+
 *fix missing number of people
 egen sum = rowtotal(numstaffstart numcovidstart numnoncovidstart ///
 		numotherstart)
@@ -186,6 +197,8 @@ drop sum
 
 *fix fans and ACs
 replace numfanon = 0 if totfan == 0
+replace numfanon = 0 if numfanon == .
+replace numacon = 0 if numacon == .
 
 *swapping incorrect temp/humidity and clean
 gen tempstart = ambienttemperaturec 
@@ -249,6 +262,7 @@ replace numwintotal = numwinclosed + numwinpartopen + numwinfullopen
 replace openwinarea = 0 if numwinopen == 0
 replace smallestopenwinarea = 0 if smallestopenwinarea == .
 gen propwinpartopen = numwinpartopen/numwintotal
+label var propwinpartopen "Proportion of windows in room that are partially open"
 
 drop _merge
 
@@ -256,8 +270,10 @@ merge 1:1 dataid using doors_final
 replace numdoortotal = 1 if numdoortotal == 0
 replace numdoorclosed = 1 if numdoorclosed == 0
 replace opendoorarea = 0 if opendoorarea == .
+replace opendoorarea = 36.1614853 if sampleid == "01_ICD1_R1"
 replace smallestopendoorarea = 0 if smallestopendoorarea == .
-drop _merge dataid
+replace smallestopendoorarea = 6.0745369 if sampleid == "01_ICD1_R1"
+drop _merge dataid 
 
 gen totalopenarea = openwinarea + opendoorarea
 label var totalopenarea "Total open door and window area"
@@ -275,7 +291,7 @@ label var windoortofloorarea "Ratio of open window and door to floor area"
 replace co2end = 427 if co2end == 247
 
 *fix co2 levels
-gen fixco2 = outdoorco2 - 400 if outdoorco2 > 430
+gen fixco2 = outdoorco2 - 410 if outdoorco2 > 430
 replace fixco2 = 0 if fixco2 == .
 label var fixco2 "Adjustment made to interior CO2 measurements from calibration check"
 gen outdoorco2new = outdoorco2 - fixco2
@@ -327,7 +343,7 @@ gen ventrateavg = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/
 label var ventratestart "Ventilation rate (L/s/p) at start of sample collection"
 label var ventratemid "Ventilation rate (L/s/p) at 15 min"
 label var ventrateend "Ventilation rate (L/s/p) at end of sample collection"
-label var ventrateavg "Average ventilation rate over sampling period(L/s/p)"
+label var ventrateavg "Average ventilation rate over sampling period (L/s/p)"
 
 *drop observation with large ventilation rate
 drop if ventrateavg > 2000
