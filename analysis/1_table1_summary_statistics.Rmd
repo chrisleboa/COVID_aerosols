@@ -63,8 +63,8 @@ list_notnormal <-
    c(
   "roomvol",
   "co2average", 
-  #"tempstart",     #Histogram showed these two to be normally distributed 
-  #"humiditystart",
+  "tempstart",     #Histogram showed these two to be normally distributed 
+  "humiditystart",
   "numcovidstart",
   "numpeopleavg", 
   "numstaffstart",
@@ -84,7 +84,7 @@ list_notnormal <-
 
 #===============================================================================
 
-
+view(merged_data)
 ```
 
 ## Check normality of variables 

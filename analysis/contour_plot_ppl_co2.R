@@ -36,25 +36,4 @@ dataset_expanded %>%
   ggplot(aes(num_people, co2, z = density)) +
   geom_contour_filled(breaks = c(0, 60, 120, 180, 500, 1000, 10000))
 
-merged_data %>% 
-  ggplot(aes(numpeopleavg, co2average)) +
-  geom_density2d_filled()
 
-merged_data %>% 
-ggplot( aes(x=numpeopleavg, y=co2average, group=result, fill=result)) +
-  geom_line(size=.5) + 
-  geom_ribbon(aes(x=numpeopleavg,,ymax=co2average),ymin=0,alpha=0.3) +
-  scale_fill_manual(name='', values=c("Detected" = "green4", "Undetected" = "red"))
-
-((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
-
-f <- function(x,z) {
-  (10^6 * 0.0052 * x) / (z - 400) / x
-}
-
-
-
-## Caitlin's solution
-
-
-f
