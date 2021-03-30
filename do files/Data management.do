@@ -6,8 +6,8 @@ import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\r
 
 rename roomarea floorarea
 
-replace floorarea = floorarea/3.281
-replace wallarea = wallarea/3.281
+replace floorarea = floorarea/10.764
+replace wallarea = wallarea/10.764
 
 label var floorarea "Floor area (sq m)"
 label var wallarea "Surface area of wall (sq m)"
@@ -17,13 +17,22 @@ save roomarea_final, replace
 *room type data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\room types.xlsx", firstrow clear
 
-rename iscovid covidspace
+rename iscovid2 covidspace
 label var covidspace "Sampling space is designated COVID area"
-rename loctype2 locationtype
+rename loctype3 locationtype
 label var locationtype "Type of sampling space"
 
-drop samploc loctype
+keep sampleid covidspace locationtype
 save newroomtype_final, replace
+
+*cross ventilation data
+import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\type of ventilation.xlsx", firstrow clear
+
+rename name sampleid
+keep sampleid crossvent
+label var crossvent "Cross ventilation present in room"
+
+save crossvent, replace
 
 *lab data
 import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\lab data 2 25 21.csv", clear
@@ -53,9 +62,6 @@ gen area = width*height
 egen openwinarea = sum(area), by(dataid)
 label var openwinarea "Total surface area of open windows (sq m)"
 
-egen smallestopenwinarea = min(area), by(dataid)
-label var smallestopenwinarea "Area of smallest open window (sq m)"
-
 egen tag = tag(dataid)
 drop if tag == 0
 drop ïwindow_serial width height _index _parent_table_name _parent_index _submission__uuid _submission__submission_time _submission__validation_status area tag typeofwindow
@@ -75,9 +81,6 @@ gen area = width*height
 
 egen opendoorarea = sum(area), by(dataid)
 label var opendoorarea "Total surface area of open doors (sq m)"
-
-egen smallestopendoorarea = min(area), by(dataid)
-label var smallestopendoorarea "Area of smallest open door (sq m)"
 
 egen tag = tag(dataid)
 drop if tag == 0
@@ -252,6 +255,10 @@ drop _merge
 merge 1:1 sampleid using newroomtype_final
 drop _merge
 
+*merge in cross ventilation sheet
+merge 1:1 sampleid using crossvent
+drop _merge
+
 *merge in windows and doors 
 rename _id dataid
 merge 1:1 dataid using windows_final
@@ -260,9 +267,6 @@ replace numwinfullopen = 0 if numwinfullopen == .
 replace numwinopen = 0 if numwinopen == .
 replace numwintotal = numwinclosed + numwinpartopen + numwinfullopen
 replace openwinarea = 0 if numwinopen == 0
-replace smallestopenwinarea = 0 if smallestopenwinarea == .
-gen propwinpartopen = numwinpartopen/numwintotal
-label var propwinpartopen "Proportion of windows in room that are partially open"
 
 drop _merge
 
@@ -271,8 +275,6 @@ replace numdoortotal = 1 if numdoortotal == 0
 replace numdoorclosed = 1 if numdoorclosed == 0
 replace opendoorarea = 0 if opendoorarea == .
 replace opendoorarea = 36.1614853 if sampleid == "01_ICD1_R1"
-replace smallestopendoorarea = 0 if smallestopendoorarea == .
-replace smallestopendoorarea = 6.0745369 if sampleid == "01_ICD1_R1"
 drop _merge dataid 
 
 gen totalopenarea = openwinarea + opendoorarea
@@ -286,6 +288,9 @@ label var doortofloorarea "Ratio of open door to floor area"
 
 gen windoortofloorarea = totalopenarea/floorarea
 label var windoortofloorarea "Ratio of open window and door to floor area"
+
+gen windoortovolume = totalopenarea/roomvol
+label var windoortovolume "Ratio of open window and door to room volume"
 
 *fix one co2 data entry error 
 replace co2end = 427 if co2end == 247
@@ -352,6 +357,7 @@ gen Q = ventrateavg * numpeopleavg
 label var Q "Absolute ventilation rate over sampling period(L/s)"
 
 gen ach = (3600 * Q)/(roomvol * 1000)
+label var ach "Air changes per hour"
 
 *sort by date of collection
 sort colldate
@@ -365,8 +371,6 @@ order numcovidend-numpeopleend, after(numpeoplemid)
 order numpeopleavg, after(numpeopleend)
 order tempstart humiditystart, before(humidityend)
 order popdensitystart-popdensityavg, after(numpeopleavg)
-order openwinarea smallestopenwinarea, after(numwinopen)
-order opendoorarea smallestopendoorarea, after(numdooropen)
 order starttime endtime submittime notes, after(ach)
 
 *save separate ward dataset
