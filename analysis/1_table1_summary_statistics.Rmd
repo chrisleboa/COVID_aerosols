@@ -21,7 +21,7 @@ library(knitr)
 library(tableone)
 
 # Parameters
-data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/2 25 21/mergeddata_22521.dta"
+data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/Final dataset/mergeddata_final.dta"
 
 merged_data <- 
   read_dta(file = data_location) %>% 
