@@ -22,7 +22,7 @@ recode_rooms_key <- c(OPD = "Outpatient Department", Other = "Non-Patient Rooms"
 #Split data by public and private hospitals 
 merged_data <- 
   read_dta(file = data_location) %>% 
-  filter(ach < 40, ventrateavg < 400) %>%  ## removing sample point with really high ACH value 
+  #filter(ach < 40) %>%  ## removing sample point with really high ACH value 
   mutate(
     any_acon = if_else(numacon > 0 , "has air cond.", "no acon"),
     private =
@@ -128,7 +128,7 @@ merged_data %>%
     title = "Figure x: Ventilation Rate of Samples", 
     y = "Ventilation Rate (L/s/p)", 
     x = "Room Type", 
-    fill = ""
+    fill = "" 
   )
 
 
@@ -141,7 +141,7 @@ plot_data %>%
   #annotate("text", size = 6,  x = "Non COVID", y = 60, label = "Adequate Natural Ventilation", vjust =  - 0.5, hjust = 0.4) +
   scale_fill_manual(values = c("red", "orange", "yellow", "light green", "green")) + 
   facet_grid(.~type, scales = "free", space = "free") + 
-  theme_grey(base_size = 12) +
+  theme_bw(base_size = 12) +
   theme(
     legend.position = "top",
     axis.text.x = element_text(angle = 45, hjust = 1) 

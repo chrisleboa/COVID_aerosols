@@ -24,8 +24,9 @@ list <-
     "popdensityavg",
     "openwinarea",
     "opendoorarea",
-    "numfanon",
-    "numacon", 
+    "fan_on",
+    "acon_on", 
+    "crossvent", 
     "co2average", 
     "Q",
     "ach",
@@ -33,8 +34,10 @@ list <-
   )
 
 list_cat <- 
-  c("numfanon",
-    "numacon")
+  c("fan_on",
+    "acon_on", 
+    "crossvent"
+    )
 
 list_notnormal <- 
   c(
@@ -56,9 +59,11 @@ list_notnormal <-
 
 merged_data <- 
   read_dta(file = data_location) %>% 
-  filter(ach < 40) %>%  ## removing sample point with really high ACH value 
+  #filter(ach < 40) %>%  ## removing sample point with really high ACH value 
   mutate(
     any_acon = if_else(numacon > 0 , "has air cond.", "no acon"),
+    acon_on =  if_else(numacon > 0 , 1, 0),
+    fan_on =  if_else(numfanon > 0 , 1, 0),
     private =
       if_else(
         str_detect(
@@ -85,5 +90,6 @@ write.csv(tab_1_locationtype, file = "output/tab_1_locationtype.csv")
 write.csv(tab_1_covidspace, file = "output/tab_1_covidspace.csv")
 write.csv(tab_1_result, file = "output/tab_1_result.csv")
 
-
-View(merged_data)
+merged_data %>% 
+  filter(ventrateavg > 60) %>% 
+  count()
