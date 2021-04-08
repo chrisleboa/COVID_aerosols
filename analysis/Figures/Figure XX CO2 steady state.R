@@ -20,10 +20,14 @@ d.long <- d %>%
   select(sampleid, locationtype, time0, time1, time2, time3, time4, time5, time6)
 
 d.long <- melt(d.long, id.vars = c("sampleid", "locationtype"))
+d.long$variable <- str_remove(d.long$variable, "time")
+d.long$variable <- as.numeric(d.long$variable)
+d.long$variable <- (d.long$variable - 1) * 5
 
 ggplot(data = d.long) + 
   geom_line(aes(x = variable, y = value, group = sampleid, color = locationtype)) +
   scale_color_brewer(palette = "Set1") +
-  theme_minimal()
+  theme_minimal() +
+  labs(x = "Time in minutes", y = "Difference in CO2 from t(0)", color = "Sampling \nspace")
   
 
