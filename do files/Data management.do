@@ -21,16 +21,23 @@ rename iscovid2 covidspace
 label var covidspace "Sampling space is designated COVID area"
 rename loctype3 locationtype
 label var locationtype "Type of sampling space"
+rename loctype2 origloctype
+label var origloctype "Original designation for sample space"
 
-keep sampleid covidspace locationtype
+keep sampleid covidspace locationtype origloctype
 save newroomtype_final, replace
 
 *cross ventilation data
 import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\type of ventilation.xlsx", firstrow clear
 
 rename name sampleid
-keep sampleid crossvent
+rename arewindowsopp windowsopp
+replace windowsopp = "1" if windowsopp == "yes"
+replace windowsopp = "0" if windowsopp == ""
+
+keep sampleid crossvent windowsopp
 label var crossvent "Cross ventilation present in room"
+label var windowsopp "Open windows are on opposite sides"
 
 save crossvent, replace
 
@@ -175,6 +182,15 @@ replace numdoortotal = 6 if sampleid == "43_DMC5_R14"
 
 *clean neardooropen and nearwinopen
 replace nearwindowopen = "" if nearwindowopen == "N/A"
+gen windowopennear = 1 if nearwindowopen == "Open"
+replace windowopennear = 0 if windowopennear == .
+label var windowopennear "Window is open nearby"
+drop nearwindowopen
+
+gen dooropennear = 1 if neardooropen == "Open"
+replace dooropennear = 0 if dooropennear == .
+label var dooropennear "Door is open nearby"
+drop neardooropen
 
 *fix missing number of people
 egen sum = rowtotal(numstaffstart numcovidstart numnoncovidstart ///
@@ -198,10 +214,24 @@ replace sum = . if numstaffend ==. & numcovidend ==. & ///
 replace numpeopleend = sum if numpeopleend == .
 drop sum
 
+*get average staff and covid patients
+egen numstaffavg = rmean(numstaffstart numstaffmid numstaffend)
+egen numcovidavg = rmean(numcovidstart numcovidmid numcovidend)
+egen numnoncovidavg = rmean(numnoncovidstart numnoncovidmid numnoncovidend)
+egen numotheravg = rmean(numotherstart numothermid numotherend)
+
 *fix fans and ACs
 replace numfanon = 0 if totfan == 0
 replace numfanon = 0 if numfanon == .
 replace numacon = 0 if numacon == .
+
+gen fanson = 1 if numfanon > 0
+replace fanson = 0 if fanson == .
+label var fanson "Any fans on in room"
+
+gen acon = 1 if numacon > 0
+replace acon = 0 if acon == .
+label var acon "Any AC units on in room"
 
 *swapping incorrect temp/humidity and clean
 gen tempstart = ambienttemperaturec 
@@ -321,11 +351,6 @@ label var co2endnew "Clean CO2 measurement at end of sample collection"
 egen co2average = rmean(co2startnew-co2endnew)
 label var co2average "Average CO2 measurement over sampling period (using clean measurements)"
 
-*add 1/2 a person for residual CO2 in rooms with 0 people
-replace numpeoplestart = 0.5 if numpeoplestart == 0
-replace numpeoplemid = 0.5 if numpeoplemid == 0
-replace numpeopleend = 0.5 if numpeopleend == 0
-
 *create people average
 egen numpeopleavg = rmean(numpeoplestart numpeoplemid numpeopleend)
 label var numpeopleavg "Average number of people in room over sampling period"
@@ -341,17 +366,24 @@ label var popdensityend "People per square meter (floor) at end of sample collec
 label var popdensityavg "Average people per square meter (floor) over sampling period"
 
 *create ventilation rate variables
-gen ventratestart = ((10^6 * 0.0052 * numpeoplestart)/(co2startnew - outdoorco2new))/numpeoplestart
-gen ventratemid = ((10^6 * 0.0052 * numpeoplemid)/(co2_15minnew - outdoorco2new))/numpeoplemid
-gen ventrateend = ((10^6 * 0.0052 * numpeopleend)/(co2endnew - outdoorco2new))/numpeopleend
-gen ventrateavg = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg
+gen ventratestart = ((10^6 * 0.0052 * numpeoplestart)/(co2startnew - outdoorco2new))/numpeoplestart if numpeoplestart > 0
+replace ventratestart = . if ventratestart < 0
+
+gen ventratemid = ((10^6 * 0.0052 * numpeoplemid)/(co2_15minnew - outdoorco2new))/numpeoplemid if numpeoplemid > 0
+replace ventratemid = . if ventratemid < 0
+
+gen ventrateend = ((10^6 * 0.0052 * numpeopleend)/(co2endnew - outdoorco2new))/numpeopleend if numpeopleend > 0
+replace ventrateend = . if ventrateend < 0
+
+gen ventrateavg = ((10^6 * 0.0052 * numpeopleavg)/(co2average - outdoorco2new))/numpeopleavg if numpeopleavg > 0
+
 label var ventratestart "Ventilation rate (L/s/p) at start of sample collection"
 label var ventratemid "Ventilation rate (L/s/p) at 15 min"
 label var ventrateend "Ventilation rate (L/s/p) at end of sample collection"
 label var ventrateavg "Average ventilation rate over sampling period (L/s/p)"
 
 *drop observation with large ventilation rate
-drop if ventrateavg > 2000
+drop if ventrateavg == 2600
 
 gen Q = ventrateavg * numpeopleavg
 label var Q "Absolute ventilation rate over sampling period(L/s)"
