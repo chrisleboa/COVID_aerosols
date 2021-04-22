@@ -1,7 +1,7 @@
 # Descriptive table 1 stratifying by room location. This spits out a table one as a CSV reporting all the medians and IQU of each sample Type 
 
 # Author: Chris LeBoa 
-# Version: 2021-03-25
+# Version: 2021-04-21
 
 # Libraries
 library(dplyr)

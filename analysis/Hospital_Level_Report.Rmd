@@ -1,0 +1,216 @@
+---
+title: "Aerosolized COVID: Hospital Level Report"
+author: "Stanford and icddr,b COVID Air Sampling Team"
+corrosponding author: "Ashley Stzinski (astyczyn@stanford.edu)"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+hospital_name = "Dhaka Medical College and Hospital"
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+#Load packages 
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(haven)
+library(knitr)
+library(tableone)
+library(tidyverse)
+
+#Load dataset
+data_location <- "/Users/ChrisLeBoa/Dropbox/COVID_aerosols/clean data/Final dataset/mergeddata_final.dta"
+
+merged_data <- read_dta(file = data_location)
+
+hospital_data <- 
+  read_dta(file = data_location) %>% 
+  filter(hosp == hospital_name)
+```
+
+## Overview
+
+Thank you for your support in collaborating with icddr,b and Stanford University on this project to understand the transmission of SARS-COV2 in Bangladeshi Hospitals. The data that has been collected will play a key role in understanding the transmission dynamics of SARS-COV2 within indoor settings and may help guide public health decision making around the world
+
+It is only though your ongoing support that any of this work is possible. We hope that the results shared in this report can help inform your decision making as we all continue to battle the ongoing COVID-19 pandemic. 
+
+In this report we aim to both share the overall results of the study as well as provide you the `r hospital_name` specific test results. 
+
+In future communication and dissemination of our results, hospital names will be de-identified when we present our overall results to the Bangladeshi Health Community and worldwide scientific community.  
+
+##  Project Rationale 
+
+Mounting evidence points to droplet and airborne spread as the dominant routes of SARS-CoV-2 transmission(1–4). The larger size of droplet particles limits their spread in both space and time, requiring close proximity to an infected individual to establish exposure. 
+
+Aerosols, in contrast, can travel in suspended air plumes with prolonged viral persistence(5,6). Exposure to SARS-CoV-2 through aerosols can thus occur over larger space and time parameters, posing greater cumulative risk in shared spaces with air recirculation and/or inadequate ventilation. 
+
+## Aerosolized COVID Testing 
+
+### Overall Results 
+We conducted environmental bioaerosol sampling in six public and three private hospitals in Dhaka, Bangladesh between October 2020 and February 2021. From these 12 locations we collected a total of 86 samples.
+
+We selected naturally-ventilated rooms for sampling, which were categorized by whether patients in that area were known or suspected to have COVID-19. We included a range of room types across facilities, including open wards, intensive care units (ICUs), outpatient departments (OPDs), doffing areas, and bathrooms. 
+
+Detailed methodology can be found in the manuscript associated with this project or by contacting the authors. 
+
+**We found aerosolized SARS-COV2 in 14 (16%) of these samples.** Aerosolized COVID was found both in locations with COVID patients and locations with no known COVID patients, indicating that airborne transmission in hospital settings may be a risk to both health workers, patients, and visitors to the hospital. 
+
+### Site Specific Results
+
+In `r hospital_name` we collected a total of `r nrow(hospital_data)` samples 
+
+Of these samples, `r nrow(hospital_data %>% filter(covidspace == "COVID"))` were from rooms with a COVID patient or COVID suspected patient in them and `r nrow(hospital_data %>% filter(covidspace != "COVID"))` samples were taken from locations with no suspected COVID patients. 
+
+From `r nrow(hospital_data)` we coullected our samples from the following locations
+
+```{r locations, echo=FALSE}
+hospital_data %>% 
+  count(locationtype) %>% 
+  rename(
+    "Location Type" = locationtype,
+    "Number of Samples" = n
+  ) %>% 
+  knitr::kable()
+```
+#### Aerosolized COVID Test Results 
+
+We found `r nrow(hospital_data %>% filter(result == "Detected"))` of the `r nrow(hospital_data)` samples tested positive for airborne SARS-COV2 from `r hospital_name`. 
+
+The positive samples came from the following locations 
+
+```{r}
+hospital_data %>% 
+  filter(result == "Detected") %>% 
+  count(locationtype) %>% 
+  rename(
+    "Location with Aerosolized COVID" = locationtype,
+    "Number of Samples Testing Positive" = n
+  ) %>% 
+  knitr::kable()
+```
+Of these `r nrow(hospital_data %>% filter(result == "Detected"))` sample(s) that tested positive, `r nrow(hospital_data %>% filter(covidspace == "COVID", result == "Detected"))` came from rooms with COVID patients or COVID suspected patients in them.  
+
+These test results tell if SARS-COV2 was circulating in the air the day air samples were collected. 
+However, they do not tell us the overall risk of COVID being transmitted through the space, if an 
+infected individual came in to the area.
+
+## Ventilation Testing 
+
+To understand the overall risk of COVID transmission in the different spaces it is important to understand the ventilation rate.   
+
+Poor ventilation is a key risk factor in the transmission of airborne viruses including SARS-COV2 and Tuberculosis. When a space has a low ventilation rate the air is recirculated, and people breathe in the same air others have exhaled instead of breathing in fresh, outside air. If a virus is in the air, poor ventilation means there is a higher chance of someone in the space breathing it in and getting sick. 
+
+The World Health Organization (WHO) recommends a space have a minimum ventilation rate of **60 Liters/person/second** to reduce the transmission risk of airborne viruses.
+
+We collected information on the ventilation rate of each space we sampled using a portable Carbon Dioxide monitor. 
+
+Overall, we found that ventilation rates varied widely between the room types that we sampled.  The median ventilation rate of our 86 samples was `r median(merged_data$ventrateavg, na.rm = TRUE)`, which is much lower than the WHO recommended value.  
+
+### Site Specific Ventilation Results
+
+In `r hospital_name` we found the 
+
+```{r}
+recode_rooms_key <- c(OPD = "Outpatient Department", Other = "Non-Patient Rooms")
+
+#Code
+
+#Split data by public and private hospitals 
+hospital_data_plot <- 
+  hospital_data %>% 
+  #filter(ach < 40) %>%  ## removing sample point with really high ACH value 
+  mutate(
+    any_acon = if_else(numacon > 0 , "has air cond.", "no acon"),
+    private =
+      if_else(
+        str_detect(
+          hosp,
+          "icddr|vercare|quare"), "private", "public"
+      ), 
+    vent_group = case_when(
+      ventrateavg < 10 ~ "less than 10", 
+      ventrateavg > 10 & ventrateavg < 30 ~ "10 to 30", 
+      ventrateavg > 30 & ventrateavg < 50 ~ "30 to 50", 
+      ventrateavg > 50 & ventrateavg < 60 ~ "50 to 60", 
+      ventrateavg > 60 ~ "greater than 60",
+    ), 
+    vent_group = 
+      factor(
+        vent_group, levels = c("less than 10", "10 to 30", "30 to 50", "50 to 60", "greater than 60")
+      ), 
+    locationtype = recode(locationtype, !!!recode_rooms_key),
+    locationtype = 
+      factor(
+        locationtype, 
+        levels = c("Open ward", "ICU", "Private room", "Outpatient Department", "Non-Patient Rooms"))
+  ) 
+
+#merged_data %>% 
+ # filter(ventrateavg > 400)
+
+data_covid_non <- 
+  hospital_data_plot %>% 
+  mutate(
+    locationtype = covidspace,
+    type = "COVID Patients"
+    )
+
+data_room <- 
+  hospital_data_plot %>% 
+  mutate(
+    type = "Room Type"
+  )
+
+plot_data <- 
+  bind_rows(data_covid_non, data_room)
+  
+# Combined data 
+plot_data %>% 
+  ggplot(aes(x = factor(locationtype), y = ventrateavg)) +
+  stat_summary(aes(color = "Median"),fun = "median", size= 0.3, geom = "crossbar") +
+  geom_hline(yintercept=60, linetype='dotdash', col = 'red', size = 1) +
+  geom_dotplot(aes(fill = vent_group), binwidth = 8, binaxis = "y", dotsize = 1.2,  width = 1, stackdir = "center") + 
+  #annotate("text", size = 6,  x = "Non COVID", y = 60, label = "Adequate Natural Ventilation", vjust =  - 0.5, hjust = 0.4) +
+  scale_fill_manual(values = c("red", "orange", "yellow", "light green", "green")) + 
+  facet_grid(.~type, scales = "free", space = "free") + 
+  theme_bw(base_size = 12) +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1) 
+    # legend.justification = c("left", "top"),
+    # legend.box.just = "left",
+    # legend.margin = margin(0, 6, 0, 0), 
+  ) +
+  labs(
+    title = "Ventilation Rate by Space Type", 
+    y = "Ventilation Rate (L/s/p)", 
+    x = "Room Type", 
+    fill = "", 
+    colour = ""
+  )
+```
+
+`r nrow(hospital_data %>% filter(ventrateavg > 60))` of the `r nrow(hospital_data)` or `r nrow(hospital_data %>% filter(ventrateavg > 60)) / nrow(hospital_data) *100`% of the samples collected from `r hospital_name` meet the WHO recommendation for naturally ventilated spaces.  
+
+This indicates indicating patients and doctors might be at increased risk of contracting COVID-19 if a COVID infected individual enters one of poorly ventilated spaces. 
+
+## Reccomendations??
+
+#### *I am not sure if we want to include possible policy reccomendations based on our results on our results for each hospital*
+
+
+*We have found that ventilation rates are highest in rooms with high ceilings and that have more open windows* 
+
+If it is impossible to open more windows of a room, decreasing the number of people in the room also can improve the ventilation of the space. 
+
+
+
+## References 
+1.	Zhang, R., Li, Y., Zhang, A. L., Wang, Y. & Molina, M. J. Identifying airborne transmission as the dominant route for the spread of COVID-19. Proc. Natl. Acad. Sci. U. S. A. 117, 14857–14863 (2020).
+2.	Azimi, P., Keshavarz, Z., Cedeno Laurent, J. G., Stephens, B. & Allen, J. G. Mechanistic transmission modeling of COVID-19 on the Diamond Princess cruise ship demonstrates the importance of aerosol transmission. Proc. Natl. Acad. Sci. U. S. A. 118, e2015482118 (2021).
+3.	Shen, Y. et al. Community Outbreak Investigation of SARS-CoV-2 Transmission Among Bus Riders in Eastern China. JAMA Intern. Med. 180, 1665–1671 (2020).
+4.	Khanh, N. C. et al. Transmission of SARS-CoV 2 During Long-Haul Flight. Emerg. Infect. Dis. 26, 2617–2624 (2020).
+5.	Bourouiba, L. Turbulent Gas Clouds and Respiratory Pathogen Emissions: Potential Implications for Reducing Transmission of COVID-19. JAMA 323, 1837–1838 (2020).
+6.	Fears, A. C. et al. Comparative dynamic aerosol efficiencies of three emergent coronaviruses and the unusual persistence of SARS-CoV-2 in aerosol suspensions. medRxiv 2020.04.13.20063784 (2020).
+
