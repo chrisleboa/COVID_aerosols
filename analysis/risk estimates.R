@@ -137,8 +137,7 @@ text <- wre %>%
   group_by(locationtype) %>%
   summarize(risk = signif(median(med.risk)*100, 3), 
             lower = signif(quantile(med.risk, probs = 0.025)*100,3),
-            upper = signif(quantile(med.risk, probs = 0.0975)*100,3),
-            I = median(med.I))
+            upper = signif(quantile(med.risk, probs = 0.975)*100,3))
 
 #Extra
 #
