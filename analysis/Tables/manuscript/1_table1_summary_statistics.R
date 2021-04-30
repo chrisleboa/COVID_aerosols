@@ -1,7 +1,7 @@
 # Descriptive table 1 stratifying by room location. This spits out a table one as a CSV reporting all the medians and IQU of each sample Type 
 
 # Author: Chris LeBoa 
-# Version: 2021-03-25
+# Version: 2021-04-21
 
 # Libraries
 library(dplyr)
@@ -29,8 +29,8 @@ list <-
     "crossvent", 
     "co2average", 
     "Q",
-    "ach",
-    "ventrateavg"
+    "ventrateavg", 
+    "ach"
   )
 
 list_cat <- 
@@ -51,8 +51,8 @@ list_notnormal <-
     "numacon", 
     "co2average", 
     "Q",
-    "ach",
-    "ventrateavg"
+    "ventrateavg", 
+    "ach"
   )
 #===============================================================================
 #Code
@@ -73,6 +73,10 @@ merged_data <-
     percent_window_open = (numwinopen / numwintotal *100)
   )
 
+# Overall 
+table_1_overall <- CreateTableOne(vars = list,  factorVars = list_cat, data = merged_data)
+tab_1_overall <- print(table_1_overall, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
+
 
 # stratify by locationtype
 table_1_locationtype <- CreateTableOne(vars = list,  factorVars = list_cat, strata = "locationtype", data = merged_data)
@@ -86,6 +90,7 @@ tab_1_covidspace <- print(table_1_covidspace, nonnormal = list_notnormal, format
 table_1_result <- CreateTableOne(vars = list, factorVars = list_cat, strata = "result", data = merged_data)
 tab_1_result <- print(table_1_result, nonnormal = list_notnormal, formatOptions = list(big.mark = ","))
 
+write.csv(tab_1_overall, file = "output/tab_1_overall.csv")
 write.csv(tab_1_locationtype, file = "output/tab_1_locationtype.csv")
 write.csv(tab_1_covidspace, file = "output/tab_1_covidspace.csv")
 write.csv(tab_1_result, file = "output/tab_1_result.csv")
