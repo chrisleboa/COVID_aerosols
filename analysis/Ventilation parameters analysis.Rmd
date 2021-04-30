@@ -306,11 +306,11 @@ elasticity.long <- elasticity.long %>%
   filter(!is.na(value)) %>%
   mutate(sig = as.factor(ifelse(labels %in% sig.names, "Significant", "Not Significant")))
 
-ggplot(data = elasticity.long) +
+plot <- ggplot(data = elasticity.long) +
   geom_point(aes(x = reorder(labels, value), y = value, color = sig))+
   geom_line(aes(x = labels, y = value, group = labels, color = sig)) +
   geom_hline(yintercept = 0, colour = "red") +
-  labs(color = "Significance", y = "Percent change in absolute ventilation (log10 L/s) \n for a 1% change in the parameter", x = "Variable") +
+  labs(color = "Significance", y = "Percent change in absolute ventilation (log10 L/s) \n for a 1% change in parameter", x = "Variable") +
   theme_minimal() +
   scale_x_discrete("", labels = c( "Fans on",
                                    expression(paste("Open door area (m"^2,")")),
@@ -319,8 +319,12 @@ ggplot(data = elasticity.long) +
                                    "AC on",
                                    expression(paste("Floor area (m"^2,")")),
                                    expression(paste("Total open window and door area (m"^2,")")),
-                                   expression(paste("Room height (m"^3,")")))) +
+                                   "Ceiling height")) +
   coord_flip() +
   scale_color_manual(values = c("dark gray", "black")) +
-  theme(legend.position = "none")
+  theme(legend.text = element_text(size = 9),
+        legend.title = element_blank())
+
+ggsave(filename = "~/Documents/COVID/elasticity.jpg",
+       width = 10, height = 6)
 ```
