@@ -33,7 +33,9 @@ import excel "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\t
 rename name sampleid
 rename arewindowsopp windowsopp
 replace windowsopp = "1" if windowsopp == "yes"
+replace windowsopp = "0" if windowsopp == "no"
 replace windowsopp = "0" if windowsopp == ""
+replace windowsopp = "1" if windowsopp == "both"
 
 keep sampleid crossvent windowsopp
 label var crossvent "Cross ventilation present in room"
@@ -42,7 +44,7 @@ label var windowsopp "Open windows are on opposite sides"
 save crossvent, replace
 
 *lab data
-import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\2 25 21\lab data 2 25 21.csv", clear
+import delimited "\\Client\C$\Users\caitlinhemlock\Dropbox\COVID aerosols\raw data\4 28 21\lab data 4 28 21.csv", clear
 
 rename sampletypetestnegcontrol sampletype
 rename sarscov2detectedundetected result
