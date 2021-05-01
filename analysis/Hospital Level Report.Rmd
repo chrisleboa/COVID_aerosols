@@ -1,16 +1,9 @@
 ---
-  title: "Aerosolized SARS-COV-2: Hospital Level Report"
-  author: "Stanford and icddr,b COVID Air Sampling Team"
-  date: April 21st, 2021
-  output: pdf_document
-  header-includes:
-   - \usepackage{titling}
-   - \predate{\begin{center}\large}
-   - \postdate{\\
-        \includegraphics[width=5in,height=2in]{logos.png}\end{center}}
+title: "Aerosolized COVID: Hospital Level Report"
+author: "Stanford and icddr,b COVID Air Sampling Team"
+corrosponding author: "Ashley Stzinski (astyczyn@stanford.edu)"
+output: pdf_document
 ---
-
- \newpage
 
 ```{r setup, include=FALSE}
 hospital_name = "Dhaka Medical College and Hospital"
@@ -38,7 +31,7 @@ hospital_data <-
 
 ## Overview
 
-Thank you for your support in collaborating with icddr,b and Stanford University on this project to understand the transmission of SARS-COV-2 in Bangladeshi Hospitals. The data that has been collected will play a key role in understanding the transmission dynamics of SARS-COV-2 within indoor settings and may help guide public health decision making around the world
+Thank you for your support in collaborating with icddr,b and Stanford University on this project to understand the transmission of SARS-COV2 in Bangladeshi Hospitals. The data that has been collected will play a key role in understanding the transmission dynamics of SARS-COV2 within indoor settings and may help guide public health decision making around the world
 
 It is only though your ongoing support that any of this work is possible. We hope that the results shared in this report can help inform your decision making as we all continue to battle the ongoing COVID-19 pandemic. 
 
@@ -55,13 +48,13 @@ Aerosols, in contrast, can travel in suspended air plumes with prolonged viral p
 ## Aerosolized COVID Testing 
 
 ### Overall Results 
-We conducted environmental bioaerosol sampling in six public and three private hospitals in Dhaka, Bangladesh between October 2020 and February 2021. From these 9 locations we collected a total of 86 samples.
+We conducted environmental bioaerosol sampling in six public and three private hospitals in Dhaka, Bangladesh between October 2020 and February 2021. From these 12 locations we collected a total of 86 samples.
 
 We selected naturally-ventilated rooms for sampling, which were categorized by whether patients in that area were known or suspected to have COVID-19. We included a range of room types across facilities, including open wards, intensive care units (ICUs), outpatient departments (OPDs), doffing areas, and bathrooms. 
 
 Detailed methodology can be found in the manuscript associated with this project or by contacting the authors. 
 
-**We found aerosolized SARS-COV-2 in 18 (18.6%) of these samples.** Aerosolized SARS-COV-2 was found both in locations with COVID patients and locations with no known COVID patients, indicating that airborne transmission in hospital settings may be a risk to both health workers, patients, and visitors to the hospital. 
+**We found aerosolized SARS-COV2 in 14 (16%) of these samples.** Aerosolized COVID was found both in locations with COVID patients and locations with no known COVID patients, indicating that airborne transmission in hospital settings may be a risk to both health workers, patients, and visitors to the hospital. 
 
 ### Site Specific Results
 
@@ -82,7 +75,7 @@ hospital_data %>%
 ```
 #### Aerosolized COVID Test Results 
 
-We found `r nrow(hospital_data %>% filter(result == "Detected"))` of the `r nrow(hospital_data)` samples tested positive for airborne SARS-COV-2 from `r hospital_name`. 
+We found `r nrow(hospital_data %>% filter(result == "Detected"))` of the `r nrow(hospital_data)` samples tested positive for airborne SARS-COV2 from `r hospital_name`. 
 
 The positive samples came from the following locations 
 
@@ -98,29 +91,25 @@ hospital_data %>%
 ```
 Of these `r nrow(hospital_data %>% filter(result == "Detected"))` sample(s) that tested positive, `r nrow(hospital_data %>% filter(covidspace == "COVID", result == "Detected"))` came from rooms with COVID patients or COVID suspected patients in them.  
 
-These test results tell if SARS-COV-2 RNA was circulating in the air the day air samples were collected. 
-
-The detection of SARS-COV-2 RNA is not proof of infectivity risk, as we did not assess the viability of the viruses we detected. 
-
-Additionally, the samples do not tell us the overall risk of COVID being transmitted through the space, as we only sampled at a single time point. If an infected individual came into an area at a later time than when we sampled, additional locations may be risks to people working at and visiting those locations. 
+These test results tell if SARS-COV2 was circulating in the air the day air samples were collected. 
+However, they do not tell us the overall risk of COVID being transmitted through the space, if an 
+infected individual came in to the area.
 
 ## Ventilation Testing 
 
-To understand the overall risk of COVID transmission in the different spaces at any time it is important to understand each location's ventilation rate.   
+To understand the overall risk of COVID transmission in the different spaces it is important to understand the ventilation rate.   
 
-Poor ventilation is a key risk factor in the transmission of airborne viruses including SARS-COV-2 and Tuberculosis. When a space has a low ventilation rate the air is recirculated, and people breathe in the same air others have exhaled instead of breathing in fresh, outside air. If a virus is in the air, poor ventilation means there is a higher chance of someone in the space breathing it in and getting sick. 
+Poor ventilation is a key risk factor in the transmission of airborne viruses including SARS-COV2 and Tuberculosis. When a space has a low ventilation rate the air is recirculated, and people breathe in the same air others have exhaled instead of breathing in fresh, outside air. If a virus is in the air, poor ventilation means there is a higher chance of someone in the space breathing it in and getting sick. 
 
-The World Health Organization (WHO) recommends a space have a minimum ventilation rate of **60 Liters/person/second (L/p/s)** in naturally ventilated healthcare facilities to reduce the transmission risk of airborne diseases (7). 
+The World Health Organization (WHO) recommends a space have a minimum ventilation rate of **60 Liters/person/second** to reduce the transmission risk of airborne viruses.
 
 We collected information on the ventilation rate of each space we sampled using a portable Carbon Dioxide monitor. 
 
-Overall, we found that ventilation rates varied widely between the room types that we sampled.  The median ventilation rate of our 86 samples was `r median(merged_data$ventrateavg, na.rm = TRUE)` L/p/s, which is much lower than the WHO recommended value.  
+Overall, we found that ventilation rates varied widely between the room types that we sampled.  The median ventilation rate of our 86 samples was `r median(merged_data$ventrateavg, na.rm = TRUE)`, which is much lower than the WHO recommended value.  
 
 ### Site Specific Ventilation Results
 
-In `r hospital_name` we found that:
-
-`r nrow(hospital_data %>% filter(ventrateavg > 60))` of the `r nrow(hospital_data)` or `r nrow(hospital_data %>% filter(ventrateavg > 60)) / nrow(hospital_data) *100`% of the samples collected from `r hospital_name` meet the WHO recommendation for naturally ventilated spaces.  
+In `r hospital_name` we found the 
 
 ```{r}
 recode_rooms_key <- c(OPD = "Outpatient Department", Other = "Non-Patient Rooms")
@@ -202,20 +191,20 @@ plot_data %>%
   )
 ```
 
-This indicates that patients and healthcare workers might be at increased risk of contracting COVID-19 if a COVID-infected individual enters one of these inadequately ventilated spaces. 
+`r nrow(hospital_data %>% filter(ventrateavg > 60))` of the `r nrow(hospital_data)` or `r nrow(hospital_data %>% filter(ventrateavg > 60)) / nrow(hospital_data) *100`% of the samples collected from `r hospital_name` meet the WHO recommendation for naturally ventilated spaces.  
 
-## Reccomendations
+This indicates indicating patients and doctors might be at increased risk of contracting COVID-19 if a COVID infected individual enters one of poorly ventilated spaces. 
 
- - We know that PPE, including masks, is not 100% protective against COVID-19. Protection of healthcare workers, patients, and visitors can be enhanced by improving ventilation. Practical measures to enhance ventilation include fully opening windows and ensuring cross-ventilation by opening doors and windows on opposite sides of the room whenever possible. If a carbon dioxide monitor is available, CO2 levels should be maintained below 500ppm.
+## Reccomendations??
 
- - Other strategies to improve ventilation include limiting the number of people in a room and ensuring adequate physical distancing.
+#### *I am not sure if we want to include possible policy reccomendations based on our results on our results for each hospital*
 
- - When identifying spaces for housing patients with COVID-19, we found that rooms with the highest ceilings have the best ventilation.
- 
- - All spaces inside a healthcare facility should be considered high-risk in the setting of community-transmission of COVID-19. This includes OPDs as well as offices and break rooms for staff. From studies outside of Bangladesh, we know that healthcare providers are more likely to be exposed to COVID-19 from colleagues and family than from patients.
- 
- - Overall, OPDs were found to have the highest positivity rates for SARS-CoV-2 as well as the lowest measures of ventilation. Strategies to reduce risk in these spaces could include mandatory mask wearing by patients and outdoor waiting areas and triage tents to minimize crowding in indoor spaces.  
-\newpage
+
+*We have found that ventilation rates are highest in rooms with high ceilings and that have more open windows* 
+
+If it is impossible to open more windows of a room, decreasing the number of people in the room also can improve the ventilation of the space. 
+
+
 
 ## References 
 1.	Zhang, R., Li, Y., Zhang, A. L., Wang, Y. & Molina, M. J. Identifying airborne transmission as the dominant route for the spread of COVID-19. Proc. Natl. Acad. Sci. U. S. A. 117, 14857–14863 (2020).
@@ -224,6 +213,4 @@ This indicates that patients and healthcare workers might be at increased risk o
 4.	Khanh, N. C. et al. Transmission of SARS-CoV 2 During Long-Haul Flight. Emerg. Infect. Dis. 26, 2617–2624 (2020).
 5.	Bourouiba, L. Turbulent Gas Clouds and Respiratory Pathogen Emissions: Potential Implications for Reducing Transmission of COVID-19. JAMA 323, 1837–1838 (2020).
 6.	Fears, A. C. et al. Comparative dynamic aerosol efficiencies of three emergent coronaviruses and the unusual persistence of SARS-CoV-2 in aerosol suspensions. medRxiv 2020.04.13.20063784 (2020).
-7. Natural Ventilation for Infection Control in Health-Care Settings. (World Health Organization, 2013).
-
 
