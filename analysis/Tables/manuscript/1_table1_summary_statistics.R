@@ -26,7 +26,7 @@ list <-
     "opendoorarea",
     "fan_on",
     "acon_on", 
-    "crossvent", 
+    "windowsopp", 
     "co2average", 
     "Q",
     "ventrateavg", 
@@ -36,7 +36,7 @@ list <-
 list_cat <- 
   c("fan_on",
     "acon_on", 
-    "crossvent"
+    "windowsopp"
     )
 
 list_notnormal <- 
@@ -95,6 +95,7 @@ write.csv(tab_1_locationtype, file = "output/tab_1_locationtype.csv")
 write.csv(tab_1_covidspace, file = "output/tab_1_covidspace.csv")
 write.csv(tab_1_result, file = "output/tab_1_result.csv")
 
-merged_data %>% 
-  filter(ventrateavg > 60) %>% 
-  count()
+max(merged_data$ventrateavg, na.rm = TRUE)
+         
+         
+         

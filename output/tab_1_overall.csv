@@ -8,7 +8,7 @@
 "opendoorarea (median [IQR])","  2.14 [1.29, 3.37]"
 "fan_on = 1 (%)","    27 (31.4) "
 "acon_on = 1 (%)","    21 (24.4) "
-"crossvent = 1 (%)","    28 (32.6) "
+"windowsopp = 1 (%)","    26 (30.2) "
 "co2average (median [IQR])","809.00 [575.89, 1,126.32]"
 "Q (median [IQR])","162.53 [49.89, 362.68]"
 "ventrateavg (median [IQR])"," 13.04 [7.91, 27.77]"
