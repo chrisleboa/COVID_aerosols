@@ -1,6 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(haven)
+library(viridis)
 source(here::here("configuration.R"))
 
 #read in data
@@ -139,126 +140,106 @@ text <- wre %>%
             lower = signif(quantile(med.risk, probs = 0.025)*100,3),
             upper = signif(quantile(med.risk, probs = 0.975)*100,3))
 
-#Extra
-#
-#
-#
-#
-#
-#
-#
-#
+###--------------------------------- by each sampling space
+openarea.quant <- c(0, quantile(d$totalopenarea[d$totalopenarea>0], probs = c(0.25,0.5,0.75)))
 
-#randomly draw values of q based on OPD vs. not
-set.seed(123)
-N.sim <- 1000
-for (j in 1:nrow(nonOPD)) {
-  q.est1 <- NULL
-  for(i in 1:N.sim){  
-    q <- rnorm(n = nonOPD$I[j], mean = -0.429, sd = 0.720)
-    q.est1 <- rbind(q.est1, mean(q))
-  }
-  mean.q <- mean(q.est1)
-  nonOPD$q[j] <- mean.q
-}
+d2 <- d %>%
+  #filter(locationtype == "OPD") %>%
+  select(sampleid, locationtype, locationtype.new, I, Qmin, result, numpeopleavg, roomheight, ventrateavg, totalopenarea) %>%
+  mutate(totalopenarea.new = case_when(totalopenarea == openarea.quant[1] ~ 1,
+                    totalopenarea > openarea.quant[1] & totalopenarea <=openarea.quant[2] ~ 2,
+                  totalopenarea > openarea.quant[2] & totalopenarea <=openarea.quant[3] ~ 3,
+                 totalopenarea > openarea.quant[3] & totalopenarea <=openarea.quant[4] ~ 4,
+                    TRUE ~ 5))
 
-for (j in 1:nrow(OPD)) {
-  q.est1 <- NULL
-  for(i in 1:N.sim){  
-    q <- rnorm(n = OPD$I[j], mean = 0.698, sd = 0.720)
-    q.est1 <- rbind(q.est1, mean(q))
-  }
-  mean.q <- mean(q.est1)
-  OPD$q[j] <- mean.q
-}
-
-total <- rbind(OPD, nonOPD)
-total <- total %>%
-  mutate(q = (10^q)/60) %>%
-  mutate(risk = 1 - exp(-(I*6*q*2400)/Qmin))
-
-ggplot(data = total) +
-  geom_boxplot(aes(x = result, y = risk)) + 
-  geom_jitter(aes(x = result, y = risk))
-
-
-###--------------------------------- by hospital
-nonOPD <- d2 %>% 
-  filter(locationtype != "OPD") %>%
-  select(sampleid, locationtype.new, I, Qmin, hosp, result)
-
-OPD <- d2 %>%
-  filter(locationtype == "OPD") %>%
-  select(sampleid, locationtype.new, I, Qmin, hosp, result)
+d2$totalopenarea.new <- factor(d2$totalopenarea.new, levels = c(1:5),
+                               labels = c("0",">0 to 2.35",">2.35 to 3.13",">3.13 to 6.82",">6.82"))
 
 #simulate
-N.sim <- 100
+N.sim <- 1000
 set.seed(123)
 wre <- NULL
-for (i in 1:N.sim){
-  #randomly draw values of q based on OPD vs. not
-  temp1 <- nonOPD
-  for (j in 1:nrow(temp1)) {
-    q <- rnorm(n = temp1$I[j], mean = -0.429, sd = 0.720)
-    temp1$q[j] <- mean(q)
-  }
-  
-  temp2 <- OPD
-  for (j in 1:nrow(temp2)) {
-    q <- rnorm(n = temp2$I[j], mean = 0.698, sd = 0.720)
-    temp2$q[j] <- mean(q)
-  }
-  
-  temp <- rbind(temp1, temp2)
-  temp$q <- (10^(temp$q))/60 #quanta per minute
-  
+total <- list(NULL)
+for(j in 1:nrow(d2)){
   risk.list <- list(NULL)
-  for(j in 1:nrow(temp)){
-    risk.est <- cbind(risk = 1 - exp(-(temp$I[j]*p*temp$q[j]*t)/temp$Qmin[j]),
-                           sampleid = temp$sampleid[j],
-                           locationtype = temp$locationtype.new[j],
+  for (i in 1:N.sim){
+  #randomly draw values of q
+    if (d2$locationtype[j] == "OPD"){
+      q <- rnorm(n = d2$I[j], mean = 0.698, sd = 0.720)
+      q <- mean(q)
+      q <- (10^(q))/60 #quanta per minute
+    } else {
+      q <- rnorm(n = d2$I[j], mean = -0.429, sd = 0.720)
+      q <- mean(q)
+      q <- (10^(q))/60
+    }
+    risk.est <- cbind(risk = 1 - exp(-(d2$I[j]*p*q*t)/d2$Qmin[j]),
+                           sampleid = d2$sampleid[j],
+                           locationtype = d2$locationtype.new[j],
                            t = t,
-                           q = temp$q[j],
-                           Q = temp$Qmin[j],
-                           I = temp$I[j],
-                           hosp = temp$hosp[j],
-                           result = temp$result[j])
+                           q = d2$q[j],
+                           Q = d2$Qmin[j],
+                           I = d2$I[j],
+                           hosp = d2$hosp[j],
+                           result = d2$result[j],
+                           numpeople = d2$numpeopleavg[j],
+                           roomheight = d2$roomheight[j],
+                           ventrate = d2$ventrateavg[j],
+                           totalopenarea = d2$totalopenarea.new[j],
+                           simulation = paste(i))
     
-    risk.list[[j]] <- risk.est
+    risk.list[[i]] <- risk.est
+    print(i)
   }
   
   risk.df <- do.call(rbind, risk.list)
+  risk.df <- as.data.frame(risk.df)
+  risk.df <- risk.df %>%
+    #convert time to hours for graph
+    mutate (t = as.numeric(t),
+            risk = as.numeric(risk),
+            t = t/60) %>%
+    #obtain median of all simulations by space for graph
+    group_by(sampleid, locationtype, t, result, 
+             numpeople, roomheight, ventrate, totalopenarea) %>%
+    summarize(med.risk = median(risk))
   
-  wre <- rbind(wre, risk.df)
-  print(i)
+  total[[j]] <- risk.df
 }
 
-wre <- as.data.frame(wre)
-wre <- wre %>%
-  mutate (t = as.numeric(t),
-          risk = as.numeric(risk),
-          t = t/60) %>%
-  group_by(sampleid, hosp, result, locationtype, t) %>%
-  summarize(med.risk = median(risk))
+wre <- do.call(rbind, total)
 
-ggplot(data = wre) +
+wre2 <- wre %>%
+  mutate(numpeople = as.numeric(numpeople),
+         #totalopenarea= as.numeric(totalopenarea),
+         #ventrate2 = as.integer(ventrate > 6.63),
+         roomheight2 = ifelse(roomheight > 2.755, "Ceiling height > 2.75m", "Ceiling height <2.75m")) %>%
+  mutate(totalopenarea = factor(totalopenarea, levels = c(1:5),
+                            labels = c("0",">0 to 2.35",">2.35 to 3.13",">3.13 to 6.82",">6.82")))
+
+ggplot(data = wre2) +
   #geom_vline(xintercept = 8, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_vline(xintercept = 16, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_vline(xintercept = 24, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_vline(xintercept = 32, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_vline(xintercept = 40, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_ribbon(aes(x = t, ymin = lower, ymax = upper), fill = "gray", alpha = 0.6) + 
-  geom_line(aes(x = as.numeric(t), y = med.risk, group = sampleid, color = result)) +
+  geom_line(aes(x = as.numeric(t), y = med.risk, group = sampleid, color = totalopenarea)) + 
+  facet_grid(locationtype~roomheight2) +
+  labs(color = "Total open\nwindow and\ndoor area",
+       x = "Hours in space", y = "Risk") +
   #geom_line(aes(x = t, y = overall.med), color = "red", size = 1) + 
   theme_minimal() +
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) +
   theme(axis.text = element_text(size = 10),
         strip.text = element_text(size = 10),
         axis.title = element_text(size = 12),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
+        #panel.grid.major = element_blank(),
+        #panel.grid.minor = element_blank(),
         axis.line = element_line(color = "black"),
-        panel.spacing.x = unit(7, "mm")) +
-  labs(x = "Hours in space", y = "Risk") +
-  scale_x_continuous(expand = c(0, 0)) + 
-  scale_y_continuous(expand = c(0, 0)) +
-  scale_color_brewer(palette = "Set1")
+        panel.spacing = unit(5, "mm")) +
+  scale_color_viridis(discrete = T)
+
+ggsave(filename = "~/Documents/COVID/risk ceiling height.jpg",
+       width = 6, height = 9)
