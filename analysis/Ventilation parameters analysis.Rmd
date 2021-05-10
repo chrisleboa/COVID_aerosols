@@ -31,17 +31,30 @@ library(plotmo)
 d <- read_dta(paste0(dropboxDir, "/clean data/Final dataset/mergeddata_final.dta"))
 d[d == ""] <- NA
 
+chisq.test(table(d$covidspace, d$result))
+
 d <- d %>%
   filter(!is.na(Q)) %>%
   mutate(ventratelog10 = log10(ventrateavg),
          Qlog10 = log10(Q),
          windowordooropennear = ifelse(windowopennear == 1 | dooropennear == 1, 1, 0),
          windowsopp = as.numeric(windowsopp))
+```
 
+```{r}
+d$result.int <- as.integer(d$result == "Detected")
+#t.test for ventilation
+t.test(d$Qlog10 ~ d$result.int, alternative = "two.sided")
+t.test(d$ventratelog10 ~ d$result.int, alternative = "two.sided")
+```
+
+```{r}
 #exploratory data analysis
 #ExpCatViz(d)
 #ExpNumViz(d)
+```
 
+```{r}
 #select ventilation measures of interest
 vent.measures <- d %>%
   select(sampleid, roomheight, roomvol, surfacearea, wallarea, floorarea, 
