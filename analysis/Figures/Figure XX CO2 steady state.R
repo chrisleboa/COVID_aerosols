@@ -29,5 +29,7 @@ ggplot(data = d.long) +
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
   labs(x = "Time in minutes", y = "Difference in CO2 from t(0)", color = "Sampling \nspace")
-  
+
+ggsave(filename = "~/Documents/COVID/co2.jpg",
+       width = 10, height = 5)  
 
