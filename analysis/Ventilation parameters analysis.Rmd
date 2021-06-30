@@ -267,9 +267,9 @@ for (i in 1:nrow(fullmodels)){
   } else{
     var <- fullmodels$Variable[i]
     temp <- as.matrix(d.new[,var])
-    fullmodels$adj.elas[i] <- signif(fullmodels$estimate.y[i] * ((mean(temp, na.rm = TRUE) / mean(d.new$Qlog10))), 2)
-    fullmodels$adj.elas.lower[i] <- signif(fullmodels$conf.low.y[i] * ((mean(temp, na.rm = TRUE) / mean(d.new$Qlog10))), 2)
-    fullmodels$adj.elas.upper[i] <- signif(fullmodels$conf.high.y[i] * ((mean(temp, na.rm = TRUE) / mean(d.new$Qlog10))), 2)
+    fullmodels$adj.elas[i] <- signif(fullmodels$estimate.y[i] * ((mean(temp, na.rm = TRUE) / mean(d.new$Qlog10))), 2) * 10
+    fullmodels$adj.elas.lower[i] <- signif(fullmodels$conf.low.y[i] * ((mean(temp, na.rm = TRUE) / mean(d.new$Qlog10))), 2) * 10
+    fullmodels$adj.elas.upper[i] <- signif(fullmodels$conf.high.y[i] * ((mean(temp, na.rm = TRUE) / mean(d.new$Qlog10))), 2) * 10
   }
 }
 
@@ -323,7 +323,7 @@ plot <- ggplot(data = elasticity.long) +
   geom_point(aes(x = reorder(labels, value), y = value, color = sig))+
   geom_line(aes(x = labels, y = value, group = labels, color = sig)) +
   geom_hline(yintercept = 0, colour = "red") +
-  labs(color = "Significance", y = "Percent change in absolute ventilation (log10 L/s) \n for a 1% change in parameter", x = "Variable") +
+  labs(color = "Significance", y = "Percent change in absolute ventilation (log10 L/s) \n for a 10% change in parameter", x = "Variable") +
   theme_minimal() +
   scale_x_discrete("", labels = c( "Fans on",
                                    expression(paste("Open door area (m"^2,")")),
@@ -335,9 +335,10 @@ plot <- ggplot(data = elasticity.long) +
                                    "Ceiling height")) +
   coord_flip() +
   scale_color_manual(values = c("dark gray", "black")) +
-  theme(legend.text = element_text(size = 9),
-        legend.title = element_blank())
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_blank(),
+        axis.text.x = element_text(size = 10))
 
 ggsave(filename = "~/Documents/COVID/elasticity.jpg",
-       width = 10, height = 6)
+       width = 8, height = 5)
 ```
