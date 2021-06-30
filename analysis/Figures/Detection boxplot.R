@@ -3,6 +3,7 @@ library(dplyr)
 library(cowplot)
 library(gridExtra)
 library(ggpubr)
+library(ggbeeswarm)
 
 #import data
 source(here::here("configuration.R"))
@@ -53,4 +54,22 @@ ggarrange(q, ventrate, legend, nrow = 1, widths=c(2.3, 2.3, 0.8))
 
 ggsave(filename = "~/Documents/COVID/detection boxplot.jpg",
        width = 11, height = 6)
+
+#----- new ----#
+ventrate <- ggplot(data = d, aes(x = result, y = ventratelog10)) + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_beeswarm(aes(color = covidspace), size = 2, dodge.width = 0.1) +
+  scale_color_manual(values = c("dodgerblue4", "darkorange2")) +
+  labs(x = "RT-qPCR RNA detection", y = "Ventilation Rate (log10 L/s/p)", 
+       color = "COVID designation \n for sampling space") +
+  theme_bw() +
+  theme(legend.title = element_text(hjust = -1, size = 13),
+        legend.position = "right",
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 13),
+        legend.text = element_text(size = 13))
+
+ggsave(filename = "~/Documents/COVID/detection boxplot.jpg",
+       width = 8, height = 5)
+
 
