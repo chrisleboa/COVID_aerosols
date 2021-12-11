@@ -89,7 +89,7 @@ for (i in 1:N.sim){
     #exponentiate 
     temp2$q[j] <- 10^(temp2$q[j])
     #reduce q by % mask wearers and surgical mask efficacy
-    temp2$q[j] <- temp2$q[j] * (1-(temp2$mask.ratio[j]*0.7))
+    temp2$q[j] <- temp2$q[j] * (1-(temp2$mask.ratio[j]*0.5))
   }
   #bind datasets back together
   temp <- rbind(temp1, temp2)
@@ -154,7 +154,7 @@ ggplot(data = wre) +
   scale_x_continuous(expand = c(0, 0)) + 
   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.15)) 
 
-ggsave(filename = "~/Documents/COVID/risk estimates.jpg",
+ggsave(filename = "~/Documents/COVID/risk estimates_rev.jpg",
        width = 10, height = 5)
 #text
 text <- wre %>%
@@ -195,7 +195,7 @@ for(j in 1:nrow(d2)){
       q <- rnorm(n = d2$I[j], mean = 0.698, sd = 0.720)
       q <- mean(q)
       q <- 10^q
-      q <- q * (1-(d2$mask.ratio[j]*0.7))
+      q <- q * (1-(d2$mask.ratio[j]*0.5))
     } else {
       q <- rnorm(n = d2$I[j], mean = -0.429, sd = 0.720)
       q <- q - 0.5
@@ -218,7 +218,6 @@ for(j in 1:nrow(d2)){
                            simulation = paste(i))
     
     risk.list[[i]] <- risk.est
-    print(i)
   }
   
   risk.df <- do.call(rbind, risk.list)
@@ -226,14 +225,14 @@ for(j in 1:nrow(d2)){
   risk.df <- risk.df %>%
     #convert time to hours for graph
     mutate (t = as.numeric(t),
-            risk = as.numeric(risk),
-            t = t/8) %>%
+            risk = as.numeric(risk)) %>%
     #obtain median of all simulations by space for graph
     group_by(sampleid, locationtype, t, result, 
              numpeople, roomheight, ventrate, totalopenarea) %>%
     summarize(med.risk = median(risk))
   
   total[[j]] <- risk.df
+  print(j)
 }
 
 wre3 <- do.call(rbind, total)
@@ -242,11 +241,11 @@ wre4 <- wre3 %>%
   mutate(numpeople = as.numeric(numpeople),
          #totalopenarea= as.numeric(totalopenarea),
          #ventrate2 = as.integer(ventrate > 6.63),
-         roomheight2 = ifelse(roomheight > 2.755, "Ceiling height > 2.75m", "Ceiling height <2.75m")) %>%
+         roomheight2 = ifelse(roomheight >= 2.75, "Ceiling height >= 2.75m", "Ceiling height <2.75m")) %>%
   mutate(totalopenarea = factor(totalopenarea, levels = c(1:5),
                             labels = c("0",">0 to 2.35",">2.35 to 3.13",">3.13 to 6.82",">6.82")))
 
-wreplot2 <- ggplot(data = wre4.new) +
+ggplot(data = wre4) +
   #geom_vline(xintercept = 8, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_vline(xintercept = 16, linetype = "dashed", color = "gray50", size = 0.25) +
   #geom_vline(xintercept = 24, linetype = "dashed", color = "gray50", size = 0.25) +
@@ -255,7 +254,7 @@ wreplot2 <- ggplot(data = wre4.new) +
   #geom_ribbon(aes(x = t, ymin = lower, ymax = upper), fill = "gray", alpha = 0.6) + 
   geom_line(aes(x = as.numeric(t), y = med.risk, group = sampleid, color = totalopenarea)) + 
   facet_grid(locationtype~roomheight2) +
-  labs(color = "Total open\nwindow and\ndoor area",
+  labs(color = expression("Total open\nwindow and\ndoor area"*(m^{"2"})),
        x = "Hours in space", y = "Risk") +
   #geom_line(aes(x = t, y = overall.med), color = "red", size = 1) + 
   theme_minimal() +
@@ -270,14 +269,14 @@ wreplot2 <- ggplot(data = wre4.new) +
         panel.spacing = unit(5, "mm")) +
   scale_color_viridis(discrete = T)
 
-ggsave(filename = "~/Documents/COVID/risk ceiling height.jpg",
+ggsave(filename = "~/Documents/COVID/risk ceiling height_rev.jpg",
        width = 6, height = 9)
 
 #---assessing drivers--#
 test <- d %>% 
   select(locationtype.new, sampleid, Qhour, I, mask.ratio, Q) %>%
   mutate(
-    q = round(ifelse(locationtype.new == "Non-COVID OPD", (10^0.698 * (1-(mask.ratio*0.7))), 10^(-0.429 - 0.5)), 2),
+    q = round(ifelse(locationtype.new == "Non-COVID OPD", (10^0.698 * (1-(mask.ratio*0.5))), 10^(-0.429 - 0.5)), 2),
     risk = 1 - exp(-(I*360*q*40)/Qhour),
     q2 = ifelse(locationtype.new == "Non-COVID OPD", q, NA)) %>%
   filter(Q < 9000)
